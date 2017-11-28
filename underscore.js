@@ -123,7 +123,6 @@
     //这个函数的作用是，将func的this指向context。
     //也就是将this绑定到参数context上。
     //这个函数根据argCount大小，也就是参数的个数，返回的是绑定了context的不同参数个数的函数
-
     var optimizeCb = function(func, context, argCount) {
         // 如果没有指定 this 指向，则返回原函数
         if (context === void 0)
@@ -169,10 +168,15 @@
     // identity, an arbitrary callback, a property matcher, or a property accessor.
     //
     var cb = function(value, context, argCount) {
+        //如果value==null，怎返回一个函数，这个函数输入什么输出什么
         if (value == null) return _.identity;
+        //如果是value是函数的话，则返回绑定了context的value函数
         if (_.isFunction(value)) return optimizeCb(value, context, argCount);
-
+        // _.isObject这里的对象包括 function 和 object,并且不是空对象
+        //由于写在了_.isFunction(value)后面，所以只有object的情况才可以执行_.matcher(value)
+        //_.matcher(attrs)返回一个函数，需要进一步传入object，才能返回布尔值，判断attrs是否全在object中
         if (_.isObject(value)) return _.matcher(value);
+        //_.property(key)返回一个函数，这个函数返回任何传入的对象的key的value。
         return _.property(value);
     };
 
@@ -1310,25 +1314,23 @@
     // Use a comparator function to figure out the smallest index at which
     // an object should be inserted so as to maintain order. Uses binary search.
     // The iteratee may also be the string name of the property to sort by (eg. length).
-    // ===== //
-    // _.sortedIndex([10, 20, 30, 40, 50], 35);
-    // => 3
-    // 二分查找
-    // 将一个元素插入已排序的数组
-    // 返回该插入的位置下标
-    //如果提供iteratee函数，iteratee将作为list排序的依据。
-    // iteratee也可以是字符串的属性名用来排序(比如length)。
+    //iteratee可以是函数，如果他是函数，那么iteratee将作为list排序的依据。
+
+    //iteratee也可以是字符串的属性名，并根据这个属性来排序(比如length)。
     //比如：
     // var stooges = [{name: 'moe', age: 40}, {name: 'curly', age: 60}];
     // _.sortedIndex(stooges, {name: 'larry', age: 50}, 'age');
     // => 1
-    // _.sortedIndex(list, value, [iteratee], [context])
+    // _.sortedIndex([10, 20, 30, 40, 50], 35);
+    // => 3
+    //_.sortedIndex(list, value, [iteratee], [context]) 这个函数的作用是将value插入list中相应位置，相应位置通过iteratee得到
+    //查找过程中使用了二分查找，二分查找成立的前提，要求list有序。返回该插入的位置下标
     _.sortedIndex = function(array, obj, iteratee, context) {
         // 注意 cb 方法
-        // iteratee 为空 || 为 String 类型（key 值）时会返回不同方法
+        // iteratee 为空 || 为 String 类型（key 值） 时 => iteratee会变成不同的函数
         iteratee = cb(iteratee, context, 1);
-        // 经过迭代函数计算的值
-        // 可打印 iteratee 出来看看
+
+        // value是将要被插入的值
         var value = iteratee(obj);
         var low = 0, high = getLength(array);
 
@@ -2291,7 +2293,7 @@
 
     // Returns whether an object has a given set of `key:value` pairs.
     // attrs 参数为一个对象
-    // 判断 object 对象中是否有 attrs 中的所有 key-value 键值对，object的键值对是否包含attrs的键值对
+    // _.isMatch(object, attrs)判断 object 对象中是否有 attrs 中的所有 key-value 键值对，object的键值对是否包含attrs的键值对
     // 返回布尔值
     _.isMatch = function(object, attrs) {
         // 提取 attrs 对象的所有 keys
@@ -2301,7 +2303,7 @@
         // 根据 attrs 的键值对数量返回布尔值
         if (object == null) return !length;
 
-        // 进行强制转换，防止参数object不是Object
+        // 进行强制转换，防止参数obj不是Object
         var obj = Object(object);
 
         // 遍历 attrs 对象键值对
@@ -2555,7 +2557,7 @@
 
     // Is a given variable an object?
     // 判断是否为对象
-    // 这里的对象包括 function 和 object
+    // 这里的对象包括 function 和 object,并且不是空对象
     _.isObject = function(obj) {
         var type = typeof obj;
         //!!obj将obj转换成布尔类型，保证obj不是null（alert(typeof null);=>object）
@@ -2705,9 +2707,14 @@
     // Returns a predicate for checking whether an object has a given set of
     // `key:value` pairs.
     // 判断一个给定的对象是否有某些键值对
+    //_.matcher(attrs)与_.isMatch(obj, attrs)类似，不同的是_.matcher(attrs)返回一个函数，需要进一步传入object，才能返回布尔值
+    //而_.isMatch(obj, attrs)直接返回布尔值
     _.matcher = _.matches = function(attrs) {
         attrs = _.extendOwn({}, attrs);
         return function(obj) {
+            // _.isMatch(object, attrs)判断 object 对象中是否有 attrs 中的所有 key-value 键值对，
+            // object的键值对是否包含attrs的键值对
+            // 返回布尔值
             return _.isMatch(obj, attrs);
         };
     };
