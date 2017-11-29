@@ -372,7 +372,6 @@
         // 根据 context 确定不同的迭代函数
         //与_.each 方法类似
         iteratee = cb(iteratee, context);
-
         // 如果传参是对象，则获取它的 keys 值数组（短路表达式).
         // 否则返回false。
         //根据keys是否为false来确定obj是否是对象，如果keys为false那么obj就为数组
@@ -387,6 +386,7 @@
             // 如果 obj 为对象，则 currentKey 为对象键值 key
             // 如果 obj 为数组，则 currentKey 为 index 值
             var currentKey = keys ? keys[index] : index;
+            //从这里看出，iteratee应该有返回值，参数格式如下：
             results[index] = iteratee(obj[currentKey], currentKey, obj);
         }
 
@@ -570,6 +570,7 @@
     // 如果是 object，则忽略 key 值，只需要查找 value 值即可
     // 即该 obj 中是否有指定的 value 值
     // 返回布尔值
+    // _.contains([1, 2, 3], 3);=>true
     _.contains = _.includes = _.include = function(obj, item, fromIndex, guard) {
         // 如果是对象，返回 values 组成的数组
         if (!isArrayLike(obj)) obj = _.values(obj);
@@ -591,28 +592,31 @@
     // 数组或者对象中的每个元素都调用 method 方法
     // 返回调用后的结果（数组或者关联数组）
     // method 参数后的参数会被当做参数传入 method 方法中
-    // _.invoke(list, methodName, *arguments)
+    // _.invoke(list, method, *arguments)
+    // _.invoke([[5, 1, 7], [3, 2, 1]], 'sort');
+    // => [[1, 5, 7], [1, 2, 3]]
+    //_.invoke([[5, 1, 7], [3, 2, 1]], Array.prototype.join);
+    //=>["5,1,7", "3,2,1"]
+    //_.invoke和_.map比较：_.invoke是能够向method传递参数，_.map中的函数的参数是固定好了的=>_.invoke可以调用更多的函数
     _.invoke = function(obj, method) {
         // *arguments 参数
         // slice  =  Array.prototype.slice()
         var args = slice.call(arguments, 2);
-        // 判断 method 是不是函数
+        // 判断 method 是不是函数,method可以是函数，也可以是内置函数名的字符串（比如'sort')
+        //可以用obj['函数名'](参数)调用这个函数
+        //console.log([5, 1, 7]['sort']([5,1,7]));
         var isFunc = _.isFunction(method);
-        // 用 map 方法对数组或者对象每个元素调用方法
-        // 返回数组
+
+        // 用 map 方法对数组或者对象每个元素调用方法,并返回一个新数组
+        //function(value)要求有返回值,可以自定义函数
         return _.map(obj, function(value) {
-            // 如果 method 不是函数，则可能是 obj 的 key 值
-            //
-            // var example= [6,7,5];
-            // example.sort();
-            // 而 obj[method] 可能为函数
             var func = isFunc ? method : value[method];
             return func == null ? func : func.apply(value, args);
         });
     };
 
     // Convenience version of a common use case of `map`: fetching a property.
-    // 一个数组，元素都是对象
+    // 一个对象数组
     // 根据指定的 key 值
     // 返回一个数组，元素都是指定 key 值的 value 值
     /*
@@ -623,14 +627,19 @@
      };
      */
     // _.pluck(list, propertyName)
+    // var stooges = [{name: 'moe', age: 40}, {name: 'larry', age: 50}, {name: 'curly', age: 60}];
+    // _.pluck(stooges, 'name');
+    // => ["moe", "larry", "curly"]
     _.pluck = function(obj, key) {
         return _.map(obj, _.property(key));
     };
 
     // Convenience version of a common use case of `filter`: selecting only objects
     // containing specific `key:value` pairs.
-    // 根据指定的键值对
-    // 选择对象
+    // obj 是一个对象数组，在这个对象数组中将含有attrs所有键值对的对象存进数组里返回
+    // _.where(listOfPlays, {author: "Shakespeare", year: 1611});
+    // => [{title: "Cymbeline", author: "Shakespeare", year: 1611},
+    //     {title: "The Tempest", author: "Shakespeare", year: 1611}]
     _.where = function(obj, attrs) {
         return _.filter(obj, _.matcher(attrs));
     };
@@ -1301,12 +1310,12 @@
 
 
     // Returns the first index on an array-like that passes a predicate test
-    // 从前往后找到数组中 `第一个满足条件` 的元素，并返回下标值
+    // 从前往后找到数组中 predicate函数return true 的元素，并返回下标值
     // 没找到返回 -1
     // _.findIndex(array, predicate, [context])
     _.findIndex = createPredicateIndexFinder(1);
 
-    // 从后往前找到数组中 `第一个满足条件` 的元素，并返回下标值
+    // 从后往前找到数组中 predicate函数return true 的元素，并返回下标值
     // 没找到返回 -1
     // _.findLastIndex(array, predicate, [context])
     _.findLastIndex = createPredicateIndexFinder(-1);
@@ -1323,7 +1332,7 @@
     // => 1
     // _.sortedIndex([10, 20, 30, 40, 50], 35);
     // => 3
-    //_.sortedIndex(list, value, [iteratee], [context]) 这个函数的作用是将value插入list中相应位置，相应位置通过iteratee得到
+    //_.sortedIndex(list, value, [iteratee], [context]) 这个函数的作用是将value插入list中相应位置，相应位置根据iteratee得到
     //查找过程中使用了二分查找，二分查找成立的前提，要求list有序。返回该插入的位置下标
     _.sortedIndex = function(array, obj, iteratee, context) {
         // 注意 cb 方法
@@ -1349,31 +1358,39 @@
     // Generator function to create the indexOf and lastIndexOf functions
     // _.indexOf = createIndexFinder(1, _.findIndex, _.sortedIndex);
     // _.lastIndexOf = createIndexFinder(-1, _.findLastIndex);
+    //_.lastIndexOf的第三个参数为空，所以他不能调用二分查找来加速，只能遍历查找
     function createIndexFinder(dir, predicateFind, sortedIndex) {
         // API 调用形式
-        // _.indexOf(array, value, [isSorted])
         // _.indexOf(array, value, [fromIndex])
         // _.lastIndexOf(array, value, [fromIndex])
+        //idx可能是数字，代表遍历的起点；也可能为true（布尔值），代表array有序可以使用二分查找
         return function(array, item, idx) {
             var i = 0, length = getLength(array);
 
             // 如果 idx 为 Number 类型
-            // 则规定查找位置的起始点
-            // 那么第三个参数不是 [isSorted]
-            // 所以不能用二分查找优化了
-            // 只能遍历查找
+            // 那么idx就是查找位置的起始点，包括正向和反向
+            //反向查找就是从起始点开始往前找，在起始点后面的点会被忽略
             if (typeof idx == 'number') {
-                if (dir > 0) { // 正向查找
+                if (dir > 0) {
+                    // 正向查找
                     // 重置查找的起始位置
+                    // i>=0, i可以超出length
+                    //在idx<0时，相当于从array最后一项往回数，如果idx+length>0,那么i=idx+length。
+                    //i是正向查找的起始位置
                     i = idx >= 0 ? idx : Math.max(idx + length, i);
-                } else { // 反向查找
+                } else {
+                    // 反向查找
                     // 如果是反向查找，重置 length 属性值
+                    // idx 是下标，他比length小1，所以计算length的时候要加上 1
+                    //length<=原来的length ,length可以为负
                     length = idx >= 0 ? Math.min(idx + 1, length) : idx + length + 1;
+                    // console.log(length);
                 }
             } else if (sortedIndex && idx && length) {
+                // _.indexOf(array, value, [isSorted])
+                // 如果您正在使用一个大数组，你知道数组已经排序，传递true给isSorted将更快的用二进制搜索
                 // 能用二分查找加速的条件
-                // 有序 & idx !== 0 && length !== 0
-
+                // sortedIndex!=null(_.indexOf情况下) & idx === true && length !== 0
                 // 用 _.sortIndex 找到有序数组中 item 正好插入的位置
                 idx = sortedIndex(array, item);
 
@@ -1388,7 +1405,15 @@
             // 如果 item !== item
             // 那么 item => NaN
             if (item !== item) {
+                //找到第一个NaN类型的下标返回
+                //这里的slice函数在_.lastIndexOf情况下是有问题的，因为length可能是负数。slice函数的第二个参数为负的话，会从数组的末尾截取
+                //会导致判断NAN的时候出错
+                //比如：
+                // console.log(_.lastIndexOf([1, 2, 3, 1, NaN, 0], NaN,-8));
+                // console.log(_.lastIndexOf([1, 2, 3, 1, 10, 0], 10,-8));
+                // 将slice产生的array，用_.isNaN判断
                 idx = predicateFind(slice.call(array, i, length), _.isNaN);
+                // console.log(slice.call(array, i, length));
                 return idx >= 0 ? idx + i : -1;
             }
 
@@ -2613,6 +2638,7 @@
     // _.isNaN(new Number(0)) => true
     // 详见 https://github.com/hanzichi/underscore-analysis/issues/13
     // 最新版本（edge 版）已经修复该 BUG
+
     _.isNaN = function(obj) {
         return _.isNumber(obj) && obj !== +obj;
     };
