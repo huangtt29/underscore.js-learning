@@ -395,12 +395,11 @@
     };
 
     // Create a reducing function iterating left or right.
-
     // dir === 1 -> _.reduce=createReduce(1)
     //var sum = _.reduce([1, 2, 3], function(memo, num，index，obj){ return memo + num; }, 0);
     // => 6
     // dir === -1 -> _.reduceRight=createReduce(-1)
-    //var list = [[0, 1], [2, 3], [4, 5]];
+    // var list = [[0, 1], [2, 3], [4, 5]];
     // var flat = _.reduceRight(list, function(a, b) { return a.concat(b); }, []);
     // => [4, 5, 2, 3, 0, 1]
     function createReduce(dir) {
@@ -416,6 +415,7 @@
                 // iteratee = function(accumulator, value, index, collection) {
                 //     return func.call(context, accumulator, value, index, collection);
                 // };
+                //随着迭代次数，更新memo
                 memo = iteratee(memo, obj[currentKey], currentKey, obj);
             }
             // 每次迭代返回值，供下次迭代调用
@@ -443,7 +443,7 @@
                 // 根据 dir 确定是向左还是向右遍历
                 index += dir;
             }
-            //这里调用iterator函数，确定了memo和index，length
+            //这里调用iterator函数，确定了memo,keys和index，length
             return iterator(obj, iteratee, memo, keys, index, length);
         };
     }
@@ -522,7 +522,7 @@
     // Determine whether all of the elements match a truth test.
     // Aliased as `all`.
     // 与 ES5 中的 Array.prototype.every 方法类似
-    // 判断数组中的每个元素或者对象中每个 value 值是否都满足 predicate 函数中的判断条件
+    // 判断数组中的每个元素或者对象中每个 value 值是否全都满足 predicate 函数中的判断条件
     // 如果是，则返回 ture；否则返回 false（有一个不满足就返回 false）
     // _.every(list, [predicate], [context])
     _.every = _.all = function(obj, predicate, context) {
@@ -630,6 +630,7 @@
     // var stooges = [{name: 'moe', age: 40}, {name: 'larry', age: 50}, {name: 'curly', age: 60}];
     // _.pluck(stooges, 'name');
     // => ["moe", "larry", "curly"]
+    //pluck是map最常使用的用例模型的简化版本，即提取数组对象中某属性值，返回一个数组
     _.pluck = function(obj, key) {
         return _.map(obj, _.property(key));
     };
@@ -646,7 +647,7 @@
 
     // Convenience version of a common use case of `find`: getting the first object
     // containing specific `key:value` pairs.
-    // 寻找第一个有指定 key-value 键值对的对象
+    // obj是对象数组，在这个数组种寻找第一个有指定 key-value 键值对的对象
     _.findWhere = function(obj, attrs) {
         return _.find(obj, _.matcher(attrs));
     };
@@ -656,10 +657,13 @@
     // 或者对象中的最大 value 值
     // 如果有 iteratee 参数，则求每个元素经过该函数迭代后的最值
     // _.max(list, [iteratee], [context])
+    //     var stooges = [{name: 'moe', age: 40}, {name: 'larry', age: 50}, {name: 'curly', age: 60}];
+    //     _.max(stooges, function(stooge){ return stooge.age; });
+    // => {name: 'curly', age: 60};
     _.max = function(obj, iteratee, context) {
         var result = -Infinity, lastComputed = -Infinity,
             value, computed;
-
+        // result 保存结果元素
         // 单纯地寻找最值
         if (iteratee == null && obj != null) {
             // 如果是数组，则寻找数组中最大元素
@@ -678,14 +682,13 @@
             }
         } else {  // 寻找元素经过迭代后的最值
             iteratee = cb(iteratee, context);
-
-            // result 保存结果元素
             // lastComputed 保存计算过程中出现的最值
             // 遍历元素
             _.each(obj, function(value, index, list) {
                 // 经过迭代函数后的值
                 computed = iteratee(value, index, list);
                 // && 的优先级高于 ||
+                //if (computed > lastComputed ||(computed === -Infinity && result === -Infinity))
                 if (computed > lastComputed || computed === -Infinity && result === -Infinity) {
                     result = value;
                     lastComputed = computed;
@@ -733,7 +736,6 @@
     // 乱序不要用 sort + Math.random()，复杂度 O(nlogn)
     // 而且，并不是真正的乱序
     // @see https://github.com/hanzichi/underscore-analysis/issues/15
-    //
     _.shuffle = function(obj) {
         // 如果是对象，则对 value 值进行乱序
         var set = isArrayLike(obj) ? obj : _.values(obj);
@@ -759,7 +761,6 @@
     // 随机返回数组或者对象中的一个元素
     // 如果指定了参数 `n`，则随机返回 n 个元素组成的数组
     // 如果参数是对象，则数组由 values 组成
-    //
     _.sample = function(obj, n, guard) {
         // 随机返回一个元素
         if (n == null || guard) {
@@ -1406,11 +1407,12 @@
             // 那么 item => NaN
             if (item !== item) {
                 //找到第一个NaN类型的下标返回
-                //这里的slice函数在_.lastIndexOf情况下是有问题的，因为length可能是负数。slice函数的第二个参数为负的话，会从数组的末尾截取
+                //这里的slice函数在_.lastIndexOf情况下有个小bug，因为length可能是负数。slice函数的第二个参数为负的话，会从数组的末尾截取
                 //会导致判断NAN的时候出错
                 //比如：
                 // console.log(_.lastIndexOf([1, 2, 3, 1, NaN, 0], NaN,-8));
                 // console.log(_.lastIndexOf([1, 2, 3, 1, 10, 0], 10,-8));
+                //但是在真正使用时很少会这样写
                 // 将slice产生的array，用_.isNaN判断
                 idx = predicateFind(slice.call(array, i, length), _.isNaN);
                 // console.log(slice.call(array, i, length));
@@ -2732,7 +2734,7 @@
 
     // Returns a predicate for checking whether an object has a given set of
     // `key:value` pairs.
-    // 判断一个给定的对象是否有某些键值对
+    // 判断一个给定的对象是否包含所有attrs
     //_.matcher(attrs)与_.isMatch(obj, attrs)类似，不同的是_.matcher(attrs)返回一个函数，需要进一步传入object，才能返回布尔值
     //而_.isMatch(obj, attrs)直接返回布尔值
     _.matcher = _.matches = function(attrs) {
