@@ -736,8 +736,10 @@
     // 乱序不要用 sort + Math.random()，复杂度 O(nlogn)
     // 而且，并不是真正的乱序
     // @see https://github.com/hanzichi/underscore-analysis/issues/15
+    //算法的思想就是遍历原数组，把原数组中位置 index 的数据随机放到新数组的前rand个位置（包括第index个）中的某一个（假设放到第rand个），
+    // 然后把新数组的第rand个位置的数放到新数组的第 index个位置
     _.shuffle = function(obj) {
-        // 如果是对象，则对 value 值进行乱序
+        // 如果是对象，则对 value 值进行乱序，set是原数组
         var set = isArrayLike(obj) ? obj : _.values(obj);
         var length = set.length;
 
@@ -747,11 +749,19 @@
         // 枚举元素
         for (var index = 0, rand; index < length; index++) {
             // 将当前所枚举位置的元素和 `index=rand` 位置的元素交换
+            //rand在[0,index]间
             rand = _.random(0, index);
+            //如果rand!==index的话，就在新数组中交换，否则就不用交换
             if (rand !== index) shuffled[index] = shuffled[rand];
+
             shuffled[rand] = set[index];
         }
-
+        //简单证明一下，对于新数组中的第i个位置，如果想要在这个位置放置某个数字，求这个数字被放在第i个位置的概率。
+        //循环从前往后，后面放置的数字可以替换掉前面放置的数字
+        //所以只需要保证，放置了那个数字后不被替换掉就可以了。
+        //假设这个位置是i，放置那个数字到位置i的概率为1/i，后面的放置过程中要求不会选到位置i
+        //所以有（1/i）*（i/i+1)*(i+1/i+2).....*(n-1/n)=1/n。
+        //同理可证其他位置
         return shuffled;
     };
 
@@ -768,16 +778,26 @@
             return obj[_.random(obj.length - 1)];
         }
 
-        // 随机返回 n 个
+        // 随机返回前 n 个
         return _.shuffle(obj).slice(0, Math.max(0, n));
     };
 
     // Sort the object's values by a criterion produced by an iteratee.
     // 排序
+    // 根据iteratee的返回值进行排序
     // _.sortBy(list, iteratee, [context])
+    // _.sortBy([1, 2, 3, 4, 5, 6], function(num){ return Math.sin(num); });
+    // => [5, 4, 6, 3, 1, 2]
+    // var stooges = [{name: 'moe', age: 40}, {name: 'larry', age: 50}, {name: 'curly', age: 60}];
+    // _.sortBy(stooges, 'name');
+    // => [{name: 'curly', age: 60}, {name: 'larry', age: 50}, {name: 'moe', age: 40}];
     _.sortBy = function(obj, iteratee, context) {
+        //iteratee根据传入参数的类型，返回不一样的函数
+        //如果iteratee不是函数的话，iteratee被替换为
+        // ƒ (obj) {
+        //     return obj == null ? void 0 : obj[key];
+        // }
         iteratee = cb(iteratee, context);
-
         // 根据指定的 key 返回 values 数组
         // _.pluck([{}, {}, {}], 'value')
         return _.pluck(
@@ -786,20 +806,24 @@
             // sort 后的结果 [{}, {}..]
             // list 是原数组
             _.map(obj, function(value, index, list) {
-
+                //return一个对象
+                //value是整个对象，或者是数组的数
                 return {
                     value: value,
                     index: index,
-                    // 元素经过迭代函数迭代后的值
+                    // 元素经过迭代函数迭代后的值，也可能是对象的value
                     criteria: iteratee(value, index, list)
+
                 };
             }).sort(function(left, right) {
                 var a = left.criteria;
                 var b = right.criteria;
                 if (a !== b) {
+                    //return >0 ,说明需要交换
                     if (a > b || a === void 0) return 1;
                     if (a < b || b === void 0) return -1;
                 }
+                //相等的情况下，保持原来的顺序
                 return left.index - right.index;
             }), 'value');
 
@@ -811,15 +835,16 @@
     // 分类规则就是 behavior 函数
     var group = function(behavior) {
         return function(obj, iteratee, context) {
-            // 返回结果是一个对象
+            // 返回结果是一个对象，以key为下标
             var result = {};
+            //这里的iteratee也有两种函数的可能
             iteratee = cb(iteratee, context);
             // 遍历元素
             _.each(obj, function(value, index) {
                 // 经过迭代，获取结果值，存为 key
                 var key = iteratee(value, index, obj);
                 // 按照不同的规则进行分组操作
-                // 将变量 result 当做参数传入，能在 behavior 中改变该值
+                // 将变量 result数组 当做参数传入，能在 behavior 中改变该值
                 behavior(result, value, key);
             });
             // 返回结果对象
@@ -834,15 +859,19 @@
     // result 是返回对象
     // value 是数组元素
     // key 是迭代后的值
+    // _.groupBy([1.3, 2.1, 2.4], function(num){ return Math.floor(num); });
+    // => {1: [1.3], 2: [2.1, 2.4]}
     _.groupBy = group(function(result, value, key) {
         // 根据 key 值分组
         // key 是元素经过迭代函数后的值
         // 或者元素自身的属性值
 
-        // result 对象已经有该 key 值了
+        // result 对象已经有该 key 值了，没有的话就在result中新建一个key值
         if (_.has(result, key))
-            result[key].push(value);
+            result[key].push(value);//在对象中push value
         else result[key] = [value];
+
+        // console.log(typeof [value]); => object，是个对象，具有length属性
     });
 
     // Indexes the object's values by a criterion, similar to `groupBy`, but for
@@ -873,18 +902,19 @@
 
         // 如果是数组，则返回副本数组
         // 是否用 obj.concat() 更方便？
-        //
         if (_.isArray(obj)){
             return slice.call(obj);
         }
 
         // 如果是类数组，则重新构造新的数组
         // 是否也可以直接用 slice 方法？
+        //（应该可以）
+        //_.map就是通过循环把obj的值存进数组里返回
         if (isArrayLike(obj)){
             return _.map(obj, _.identity);
         }
 
-        // 如果是对象，则返回 values 集合
+        // 如果是对象，则返回 values 集合。也是通过循环将values存进数组里
         return _.values(obj);
     };
 
@@ -902,6 +932,8 @@
     // 和不符合条件的元素（数组为元素，对象为 value 值）
     // 分别放入两个数组中
     // 返回一个数组，数组元素为以上两个数组（[[pass array], [fail array]]）
+    //_.partition([0, 1, 2, 3, 4, 5], isOdd);
+    // => [[1, 3, 5], [0, 2, 4]]
     _.partition = function(obj, predicate, context) {
         predicate = cb(predicate, context);
         var pass = [], fail = [];
@@ -2758,12 +2790,21 @@
     };
 
     // Return a random integer between min and max (inclusive).
-    // 返回一个 [min, max] 范围内的任意整数
+    // I don't think we do want to "support" this case,
+    //这个函数在你传入浮点数的时候会返回浮点数，作者作出如下解释：
+    // because the function is supposed to work with integers.
+    // If we were returning a random float between min and max, this would be different.
+    // Instead, you can round before you call random
+    //
+    // 传入两个参数的情况下返回一个 [min, max]范围内的任意整数
+    //如果只有一个参数，则返回一个[0,min]范围的整数
     _.random = function(min, max) {
         if (max == null) {
             max = min;
             min = 0;
         }
+        //由于这里 (max - min + 1)，所以可以取到最大值
+        //如果是(max - min)的话，就不能取到最大值，[min,max)
         return min + Math.floor(Math.random() * (max - min + 1));
     };
 
