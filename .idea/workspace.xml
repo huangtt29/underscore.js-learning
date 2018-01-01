@@ -21,7 +21,7 @@
         <entry file="file://$PROJECT_DIR$/underscore.js">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="306">
-              <caret line="1038" column="21" lean-forward="true" selection-start-line="1038" selection-start-column="21" selection-end-line="1038" selection-end-column="21" />
+              <caret line="1038" column="21" lean-forward="false" selection-start-line="1038" selection-start-column="21" selection-end-line="1038" selection-end-column="21" />
               <folding />
             </state>
           </provider>
@@ -30,7 +30,7 @@
       <file leaf-file-name="test.html" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/test.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="480">
+            <state relative-caret-position="912">
               <caret line="19" column="59" lean-forward="false" selection-start-line="19" selection-start-column="59" selection-end-line="19" selection-end-column="59" />
               <folding />
             </state>
@@ -104,7 +104,7 @@
     <option name="height" value="1050" />
   </component>
   <component name="ProjectView">
-    <navigator currentView="ProjectPane" proportions="" version="1">
+    <navigator proportions="" version="1">
       <flattenPackages />
       <showMembers />
       <showModules />
@@ -117,21 +117,7 @@
       <manualOrder />
       <foldersAlwaysOnTop value="true" />
     </navigator>
-    <panes>
-      <pane id="ProjectPane">
-        <subPane>
-          <expand>
-            <path>
-              <item name="underscore.js-learning" type="b2602c69:ProjectViewProjectNode" />
-              <item name="underscore.js-learning" type="462c0819:PsiDirectoryNode" />
-            </path>
-          </expand>
-          <select />
-        </subPane>
-      </pane>
-      <pane id="Scope" />
-      <pane id="Scratches" />
-    </panes>
+    <panes />
   </component>
   <component name="PropertiesComponent">
     <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
@@ -172,11 +158,12 @@
       <workItem from="1512390727375" duration="608000" />
       <workItem from="1512435921210" duration="6156000" />
       <workItem from="1512547965580" duration="13037000" />
+      <workItem from="1513056428516" duration="105000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="44467000" />
+    <option name="totallyTimeSpent" value="44572000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-9" y="-9" width="1938" height="1050" extended-state="6" />
@@ -231,6 +218,22 @@
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/underscore.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="912">
+          <caret line="19" column="59" lean-forward="false" selection-start-line="19" selection-start-column="59" selection-end-line="19" selection-end-column="59" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/underscore.js">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
@@ -321,7 +324,7 @@
     <entry file="file://$PROJECT_DIR$/test1.html" />
     <entry file="file://$PROJECT_DIR$/test.html">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="480">
+        <state relative-caret-position="912">
           <caret line="19" column="59" lean-forward="false" selection-start-line="19" selection-start-column="59" selection-end-line="19" selection-end-column="59" />
           <folding />
         </state>
@@ -330,7 +333,7 @@
     <entry file="file://$PROJECT_DIR$/underscore.js">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="306">
-          <caret line="1038" column="21" lean-forward="true" selection-start-line="1038" selection-start-column="21" selection-end-line="1038" selection-end-column="21" />
+          <caret line="1038" column="21" lean-forward="false" selection-start-line="1038" selection-start-column="21" selection-end-line="1038" selection-end-column="21" />
           <folding />
         </state>
       </provider>
