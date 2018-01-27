@@ -1537,14 +1537,14 @@
 
     // Determines whether to execute a function as a constructor
     // or a normal function with the provided arguments
-    // 这个函数执行绑定功能，同时根据是否是new调用，来判断是否需要返回对象，或者是直接返回绑定成功的函数
+    // 这个函数执行绑定功能，同时根据是否是new调用，来判断是否需要返回对象，或者是直接绑定好执行
     // sourceFunc是需要绑定this的函数，boundFunc是调用bind后返回的已绑定好this的函数，context是this的指向
     // callingContext是调用这个函数的context，可能是window，也可能是new出来的对象，args是参数
 
     var executeBound = function(sourceFunc, boundFunc, context, callingContext, args) {
         // 对boundFunc直接调用时，即直接boundFunc(), 传入的this，也就是callingContext指向global object，在浏览器中指window
         // 所以直接调用时，callingContext instanceof boundFunc  =>  false
-        // 所以此时不是new调用直接绑定好context，并传入参数返回即可
+        // 所以此时不是new调用直接绑定好context，并传入参数后执行
         if (!(callingContext instanceof boundFunc))
             return sourceFunc.apply(context, args);
 
@@ -1632,7 +1632,7 @@
             // 这里是考虑了boundArgs没有传入所有的参数，并且也没有给出占位符
             while (position < arguments.length)
                 args.push(arguments[position++]);
-
+            //由于直接将this传递给callingContext参数，所以他不改变函数原有的this指向
             return executeBound(func, bound, this, this, args);
         };
 
@@ -1642,8 +1642,18 @@
     // Bind a number of an object's methods to that object. Remaining arguments
     // are the method names to be bound. Useful for ensuring that all callbacks
     // defined on an object belong to it.
-    // 指定一系列方法（methodNames）中的 this 指向（object）
+    // 将对象上的方法的 this 指向该对象，这样直接调用该方法时，this已经绑定好了
     // _.bindAll(object, *methodNames)
+    //    function Person(name){
+    //     this.name = name;
+    //     this.greet = function(){
+    //         console.log("hello everyone, I am " + this.name);
+    //     };
+    // }
+    // var tom = new Person("Tom");
+    // _.bindAll(tom,"greet");
+    // var greet = tom.greet();
+    // greet();//输出<hello everyone, I am Tom>
     _.bindAll = function(obj) {
         var i, length = arguments.length, key;
         // 如果只传入了一个参数（obj），没有传入 methodNames，则报错
@@ -1653,7 +1663,7 @@
         // 遍历 methodNames
         for (i = 1; i < length; i++) {
             key = arguments[i];
-            // 逐个绑定
+            // 将obj[key]绑定到obj上
             obj[key] = _.bind(obj[key], obj);
         }
         return obj;
@@ -1661,9 +1671,9 @@
 
     // Memoize an expensive function by storing its results.
     //「记忆化」，存储中间运算结果，提高效率
-    // 参数 hasher 是个 function，用来计算 key
-    // 如果传入了 hasher，则用 hasher 来计算 key
-    // 否则用 key 参数直接当 key（即 memoize 方法传入的第一个参数）
+    // 参数 hasher 是个 function，用来计算 address
+    // 如果传入了 hasher，则用 hasher 来计算 address
+    // 否则用传入的key 当 address
     // _.memoize(function, [hashFunction])
     // 适用于需要大量重复求值的场景
     // 比如递归求解菲波那切数
@@ -1673,29 +1683,31 @@
     // check whether function has already been run with given arguments via hash lookup
     // if false - run function, and store output in hash
     // if true, return output stored in hash
-    //
-    // ??????
+    // _.memorize()是通过缓存来实现优化的，只要之后的运算用到了之前缓存下来的结果，那就是有优化了。
+    // var memo_fibonacci = _.memorize(fibonacci);
+    // memo_fibonacci(30);
+    // memo_fibonacci(n); 上一次的cache其实缓存了[0,30]的值，不单单是n=30的值。
     _.memoize = function(func, hasher) {
         var memoize = function(key) {
             // 储存变量，方便使用
             var cache = memoize.cache;
 
-            // 求 process._kill();ey
-            // 如果传入了 hasher，则用 hasher 函数来计算 key
-            // 否则用 参数 key（即 memoize 方法传入的第一个参数）当 key
+            // 求key
+            // 如果传入了 hasher，则用 hasher 函数来计算 key, hasher的参数通过arguments传入
+            // 否则用参数 key 当 address
             var address = '' + (hasher ? hasher.apply(this, arguments) : key);
             // 如果这个 key 还没被 hash 过（还没求过值）
             if (!_.has(cache, address))
                 cache[address] = func.apply(this, arguments);
 
+            console.log(cache);
             // 返回
             return cache[address];
         };
-
+        // cache是memoize函数的一个属性
         // cache 对象被当做 key-value 键值对缓存中间运算结果
         memoize.cache = {};
-        // console.log(memoize.cache);
-        // 返回一个函数（经典闭包）
+        // 返回一个函数
         return memoize;
     };
 
@@ -1705,6 +1717,7 @@
     // _.delay(function, wait, *arguments)
     //  如果传入了 arguments 参数，则会被当作 func 的参数在触发时调用
     // 其实是封装了「延迟触发某方法」，使其复用
+    //_.delay(console.log, 1000, 'logged later');
     _.delay = function(func, wait) {
         // 获取 *arguments
         // 是 func 函数所需要的参数

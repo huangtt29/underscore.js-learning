@@ -20,11 +20,7 @@
 
     window.onload=function () {
 
-        var func = function(greeting){ return greeting + ': ' + this.name };
-        func = _.bind(func, {name: 'moe'}, 'hi');
-
-        console.log(func());
-
+        _.delay(console.log, 1000, 'logged later');
     }
 </script>
 </body>
