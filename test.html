@@ -9,6 +9,8 @@
     <p>js中的类型判断总结
         // 使用Array.isArray 或者 Object.prototype.toString.call
         // 区分数组,普通对象
+        <!--bind-->
+        <!--_.isArguments-->
     </p>
     <p></p>
 
@@ -17,8 +19,11 @@
 <script>
 
     window.onload=function () {
-        console.log(_.partition([0, 1, 2, 3, 4, 5], isOdd));
-    // => {1: [1.3], 2: [2.1, 2.4]}
+
+        var func = function(greeting){ return greeting + ': ' + this.name };
+        func = _.bind(func, {name: 'moe'}, 'hi');
+
+        console.log(func());
 
     }
 </script>

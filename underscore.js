@@ -374,7 +374,7 @@
         iteratee = cb(iteratee, context);
         // 如果传参是对象，则获取它的 keys 值数组（短路表达式).
         // 否则返回false。
-        //根据keys是否为false来确定obj是否是对象，如果keys为false那么obj就为数组
+        // 根据keys是否为false来确定obj是否是对象，如果keys为false那么obj就为数组
         var keys = !isArrayLike(obj) && _.keys(obj),
             // 如果 obj 为对象，则 length 为 key.length
             // 如果 obj 为数组，则keys为空，则 length 为 obj.length
@@ -1028,7 +1028,7 @@
     // ===== //
     // input => Array 或者 arguments
     // shallow => 是否只展开一层
-    // strict === true，通常和 shallow === true 配合使用
+    // strict === true，表示不保留基本元素，strict===false 表示保留基本元素，通常和 shallow === true 配合使用
     // 表示只展开一层，但是不保存非数组元素（即无法展开的基础类型）
     // flatten([[1, 2], 3, 4], true, true) => [1, 2]
     // flatten([[1, 2], 3, 4], false, true) = > []
@@ -1046,16 +1046,16 @@
         // 根据 startIndex 变量确定需要展开的起始位置
         for (var i = startIndex || 0, length = getLength(input); i < length; i++) {
             var value = input[i];
-            // 数组 或者 arguments
-            // 注意 isArrayLike 还包括 {length: 10} 这样的，过滤掉
+
+            // 数组 或者 arguments(类数组)
+            // isArrayLike指类数组，underscope.js中类数组的定义是length属性为number的obj，比如{length: 10}
+            // isArray调用Array.isArray
             if (isArrayLike(value) && (_.isArray(value) || _.isArguments(value))) {
-                // flatten current level of array or arguments object
-                // (!shallow === true) => (shallow === false)
-                // 则表示需深度展开
-                // 继续递归展开
+                // flatten current level of array or arguments obje
+
                 if (!shallow){
-                    // flatten 方法返回数组
-                    // 将上面定义的 value 重新赋值
+                    // shallow===false 表示需深度展开
+                    // 这里使用了递归，对value重新调用flatten，得到完全展开的结果对value进行赋值
                     value = flatten(value, shallow, strict);
                 }
                 // 递归展开到最后一层（没有嵌套的数组了）
@@ -1069,16 +1069,17 @@
                 output.length += len;
 
                 // 将 value 数组的元素添加到 output 数组中
+                // 递归到这步的时候会执行这个while循环，将value都写进output中
                 while (j < len) {
                     output[idx++] = value[j++];
                 }
+
             } else if (!strict) {
                 // (!strict === true) => (strict === false)
+                // 当value是基本类型不是数组和类数组，并且strict为false时，会跳到这个else if
                 // 如果是深度展开，即 shallow 参数为 false
-                // 那么当最后 value 不是数组，是基本类型时
-                // 肯定会走到这个 else-if 判断中
                 // 而如果此时 strict 为 true，则不能跳到这个分支内部
-                // 所以 shallow === false 如果和 strict === true 搭配
+                // 所以 shallow === false && strict === true
                 // 调用 flatten 方法得到的结果永远是空数组 []
                 output[idx++] = value;
             }
@@ -1089,16 +1090,17 @@
 
     // Flatten out an array, either recursively (by default), or just one level.
     // 将嵌套的数组展开
-    // 如果参数 (shallow === true)，则仅展开一层
     // _.flatten([1, [2], [3, [[4]]]]);
     // => [1, 2, 3, 4];
     // ====== //
+    // 如果参数 (shallow === true)，则仅展开一层
     // _.flatten([1, [2], [3, [[4]]]], true);
     // => [1, 2, 3, [[4]]];
     _.flatten = function(array, shallow) {
         // array => 需要展开的数组
         // shallow => 是否只展开一层
         // false 为 flatten 方法 strict 变量
+        // strict === false，则可以在flatten中处理基本类型
         return flatten(array, shallow, false);
     };
 
@@ -1252,17 +1254,18 @@
     // _.difference([1, 2, 3, 4, 5], [5, 2, 10]);
     // => [1, 3, 4]
     // ===== //
-    // 剔除 array 数组中在 others 数组中出现的元素
+    // 剔除 array 数组中在 arguments 数组中出现的元素
+    //_.difference(array, *others)
     _.difference = function(array) {
-        // 将 others 数组展开一层
-        // rest[] 保存展开后的元素组成的数组
-        // strict 参数为 true
         // 不可以这样用 _.difference([1, 2, 3, 4, 5], [5, 2], 10);
-        // 10 就会取不到
+        // 10 就会取不到，默认只有前两个参数有用
+        // var flatten = function(input, shallow, strict, startIndex)
+        // shallow===true =>只展开一层 ,strict===true 在这里没什么用貌似（？）
+        // startIndex===1 =>只展开others数组
+        // 将arguments全部传入flatten
         var rest = flatten(arguments, true, true, 1);
         // 遍历 array，过滤
         return _.filter(array, function(value){
-
             // 如果 value 存在在 rest 中，则过滤掉
             return !_.contains(rest, value);
         });
@@ -1276,6 +1279,9 @@
     // ===== //
     // 将多个数组中相同位置的元素归类
     // 返回一个数组
+    // _.zip 和 _.unzip的用处好像差不多，好像只有参数的形式不同？
+    // _.zip的参数是多个数组，返回一个数组。
+    // _.unzip的参数是一个数组，返回一个数组
     _.zip = function() {
         return _.unzip(arguments);
     };
@@ -1304,9 +1310,18 @@
     // pairs, or two parallel arrays of the same length -- one of keys, and one of
     // the corresponding values.
     // 将数组转化为对象
+    // 将数组转换为对象。传递任何一个单独[key, value]对的列表，或者一个键的列表和一个值得列表。
+    // 如果存在重复键，最后一个值将被返回。
+    // _.object(['moe', 'larry', 'curly'], [30, 40, 50]);
+    // => {moe: 30, larry: 40, curly: 50}
+    //
+    // _.object([['moe', 30], ['larry', 40], ['curly', 50]]);
+    // => {moe: 30, larry: 40, curly: 50}
     _.object = function(list, values) {
+
         var result = {};
         for (var i = 0, length = getLength(list); i < length; i++) {
+            //根据参数的个数，来判断操作
             if (values) {
                 result[list[i]] = values[i];
             } else {
@@ -1486,15 +1501,21 @@
     // the native Python `range()` function. See
     // [the Python documentation](http://docs.python.org/library/functions.html#range).
     // 返回某一个范围内的数组成的数组
+    //
     _.range = function(start, stop, step) {
         if (stop == null) {
+            //如果没有指定stop，就默认[0,start]
+            //_.range(10);
+            // => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
             stop = start || 0;
             start = 0;
         }
-
+        //step 默认为 1
         step = step || 1;
 
         // 返回数组的长度
+        //_.range(0); => length=0
+        // => []
         var length = Math.max(Math.ceil((stop - start) / step), 0);
 
         // 返回的数组
@@ -1505,6 +1526,7 @@
         }
 
         return range;
+
     };
 
 
@@ -1515,24 +1537,24 @@
 
     // Determines whether to execute a function as a constructor
     // or a normal function with the provided arguments
+    // 这个函数执行绑定功能，同时根据是否是new调用，来判断是否需要返回对象，或者是直接返回绑定成功的函数
+    // sourceFunc是需要绑定this的函数，boundFunc是调用bind后返回的已绑定好this的函数，context是this的指向
+    // callingContext是调用这个函数的context，可能是window，也可能是new出来的对象，args是参数
+
     var executeBound = function(sourceFunc, boundFunc, context, callingContext, args) {
-        // 非 new 调用 _.bind 返回的方法（即 bound）
-        // callingContext 不是 boundFunc 的一个实例
+        // 对boundFunc直接调用时，即直接boundFunc(), 传入的this，也就是callingContext指向global object，在浏览器中指window
+        // 所以直接调用时，callingContext instanceof boundFunc  =>  false
+        // 所以此时不是new调用直接绑定好context，并传入参数返回即可
         if (!(callingContext instanceof boundFunc))
             return sourceFunc.apply(context, args);
 
-        // 如果是用 new 调用 _.bind 返回的方法
-
+        // 如果是用 new 调用boundFunc
         // self 为 sourceFunc 的实例，继承了它的原型链
         // self 理论上是一个空对象（还没赋值），但是有原型链
         var self = baseCreate(sourceFunc.prototype);
 
-        // 用 new 生成一个构造函数的实例
-        // 正常情况下是没有返回值的，即 result 值为 undefined
-        // 如果构造函数有返回值
-        // 如果返回值是对象（非 null），则 new 的结果返回这个对象
-        // 否则返回实例
-        // @see http://www.cnblogs.com/zichi/p/4392944.html
+        // 这里是为了语义一致，以new调用函数时，若函数返回对象，则那个对象作为构造函数的返回值
+        // 否则返回一个运行时自动给你创建的对象（并且给你加上了原型）
         var result = sourceFunc.apply(self, args);
 
         // 如果构造函数返回了对象
@@ -1558,21 +1580,25 @@
     _.bind = function(func, context) {
         // 如果浏览器支持 ES5 bind 方法，并且 func 上的 bind 方法没有被重写
         // 则优先使用原生的 bind 方法
-        // if (nativeBind && func.bind === nativeBind)
-        //   return nativeBind.apply(func, slice.call(arguments, 1));
+        if (nativeBind && func.bind === nativeBind)
+          return nativeBind.apply(func, slice.call(arguments, 1));
         // 如果传入的参数 func 不是方法，则抛出错误
         if (!_.isFunction(func))
             throw new TypeError('Bind must be called on a function');
-
+        // 调用bind时可以传入参数，调用bind返回的函数时也可以传入参数，但是bind时参入的参数优先使用
         // polyfill
         // 经典闭包，函数返回函数
-        // args 获取优先使用的参数
+        // args 获取优先使用的参数，也就是bind时传入的参数
         var args = slice.call(arguments, 2);
+        //返回的bound函数
         var bound = function() {
             // args.concat(slice.call(arguments))
             // 最终函数的实际调用参数由两部分组成
             // 一部分是传入 _.bind 的参数（会被优先调用）
             // 另一部分是传入 bound（_.bind 所返回方法）的参数
+            // slice.call(arguments)中的arguments是调用bound函数时传入的参数
+            // slice.call(arguments)将arguments转化为 Array
+            // bound被传入executeBound中用来检测bound函数是否被new调用
             return executeBound(func, bound, context, this, args.concat(slice.call(arguments)));
         };
 
@@ -1583,21 +1609,27 @@
     // arguments pre-filled, without changing its dynamic `this` context. _ acts
     // as a placeholder, allowing any combination of arguments to be pre-filled.
     // _.partial(function, *arguments)
-    // _.partial 能返回一个方法
-    // pre-fill 该方法的一些参数
+    // 局部应用一个函数填充在任意个数的 arguments，不改变其动态this值。和bind方法很相近。
+    // 你可以传递_ 给arguments列表来指定一个不预先填充，但在调用时提供的参数。
+    // Using a placeholder
+    //     subFrom20 = _.partial(subtract, _, 20);
+    //     subFrom20(5);
+    // => 15
     _.partial = function(func) {
         // 提取希望 pre-fill 的参数
         // 如果传入的是 _，则这个位置的参数暂时空着，等待手动填入
+        // boundArgs是 _.partial时传入的参数，参数可能包含占位符 _
         var boundArgs = slice.call(arguments, 1);
         var bound = function() {
             var position = 0, length = boundArgs.length;
             var args = Array(length);
             for (var i = 0; i < length; i++) {
-                // 如果该位置的参数为 _，则用 bound 方法的参数填充这个位置
-                // args 为调用 _.partial 方法的 pre-fill 的参数 & bound 方法的 arguments
+                // 如果该位置的参数为 _，则用 boundArgs 填充这个位置
+                // args 通过合并arguments和boundArgs得到最终传入的参数
                 args[i] = boundArgs[i] === _ ? arguments[position++] : boundArgs[i];
             }
             // bound 方法还有剩余的 arguments，添上去
+            // 这里是考虑了boundArgs没有传入所有的参数，并且也没有给出占位符
             while (position < arguments.length)
                 args.push(arguments[position++]);
 
