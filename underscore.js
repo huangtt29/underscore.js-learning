@@ -372,6 +372,7 @@
         // 根据 context 确定不同的迭代函数
         //与_.each 方法类似
         iteratee = cb(iteratee, context);
+
         // 如果传参是对象，则获取它的 keys 值数组（短路表达式).
         // 否则返回false。
         // 根据keys是否为false来确定obj是否是对象，如果keys为false那么obj就为数组
@@ -1459,7 +1460,7 @@
                 //比如：
                 // console.log(_.lastIndexOf([1, 2, 3, 1, NaN, 0], NaN,-8));
                 // console.log(_.lastIndexOf([1, 2, 3, 1, 10, 0], 10,-8));
-                //但是在真正使用时很少会这样写
+                // 但是在真正使用时很少会这样写
                 // 将slice产生的array，用_.isNaN判断
                 idx = predicateFind(slice.call(array, i, length), _.isNaN);
                 // console.log(slice.call(array, i, length));
@@ -1730,11 +1731,13 @@
 
     // Defers a function, scheduling it to run after the current call stack has
     // cleared.
+    // 延迟调用function直到当前调用栈清空为止，类似使用延时为0的setTimeout方法
     // 和 setTimeout(func, 0) 相似（源码看来似乎应该是 setTimeout(func, 1)）
     // _.defer(function, *arguments)
     // 如果传入 *arguments，会被当做参数，和 _.delay 调用方式类似（少了第二个参数）
     // 其实核心还是调用了 _.delay 方法，但第二个参数（wait 参数）设置了默认值为 1
-    // 如何使得方法能设置默认值？用 _.partial 方法
+    // 使用 _.partial 方法来延迟传入func给_.delay
+    // _.defer(function(){ alert('deferred'); });
     _.defer = _.partial(_.delay, _, 1);
 
     // Returns a function, that, when invoked, will only be triggered at most once
@@ -1750,23 +1753,21 @@
     // 那么最后一次回调不会被触发
     // **Notice: options 不能同时设置 leading 和 trailing 为 false**
     // 示例：
-    // var throttled = _.throttle(updatePosition, 100);
-    // $(window).scroll(throttled);
-    // 调用方式（注意看 A 和 B console.log 打印的位置）：
-    // _.throttle(function, wait, [options])
-    // sample 1: _.throttle(function(){}, 1000)
-    // print: A, B, B, B ...
-    // sample 2: _.throttle(function(){}, 1000, {leading: false})
-    // print: B, B, B, B ...
-    // sample 3: _.throttle(function(){}, 1000, {trailing: false})
-    // print: A, A, A, A ...
+    // window.onscroll = _.throttle(log, 1000);
+    // window.onscroll = _.throttle(log, 1000, {leading: false});
+    // window.onscroll = _.throttle(log, 1000, {trailing: false});
+    // 以scroll为例，滚动开始时会触发一次函数
+    // 滚动结束后也会触发一次，所以正常情况下，都会触发两次函数。
+    // 但是可以通过 {trailing: false} {leading: false}配置
+    // 实现方法：其一通过previous记录上一次执行的时间，判断是否已经wait足够久，如果是，则执行，并更新上次执行的时间戳，如此循环；
+    // 其二使用定时器，每次真正执行函数之前，如果已经存在定时器，则不执行。直到定时器触发，handler 被清除，然后执行，并重新设置定时器。
     // ----------------------------------------- //
     _.throttle = function(func, wait, options) {
         var context, args, result;
         // setTimeout 的 handler
         var timeout = null;
         // 标记时间戳
-        // 上一次执行回调的时间戳
+        // 上一次执行函数的时间戳
         var previous = 0;
         // 如果没有传入 options 参数
         // 则将 options 参数置为空对象
@@ -1774,15 +1775,15 @@
             options = {};
 
         var later = function() {
-            // 如果 options.leading === false
-            // 则每次触发回调后将 previous 置为 0
-            // 否则置为当前时间戳
+            // 如果 options.leading === false，即每次开始不执行
+            // 则每次触发回调后将 previous 置为 0，相当于每次都是第一次执行，那么后面就会一直跳过这次执行
+            // console.log("later");
             previous = options.leading === false ? 0 : _.now();
             timeout = null;
             result = func.apply(context, args);
 
             // 这里的 timeout 变量一定是 null 了吧
-            //检测是为了 防止递归调用，产生新的timeout
+            // 检测是为了 防止递归调用，产生新的timeout
             if (!timeout)
                 context = args = null;
         };
@@ -1791,27 +1792,21 @@
         // 每次触发滚轮事件即执行这个返回的方法
         // _.throttle 方法返回的函数
         return function() {
-
             // 记录当前时间戳
             var now = _.now();
-            // console.log(now);
-            // console.log("=====");
-            // console.log(previous);
-            // console.log("+++");
-            // 第一次执行回调（此时 previous 为 0，之后 previous 值为上一次时间戳）
-            // 并且如果程序设定第一个回调不是立即执行的（options.leading === false）
-            // 则将 previous 值（表示上次执行的时间戳）设为 now 的时间戳（第一次触发时）
-            // 表示刚执行过，这次就不用执行了
+
+            // 第一次执行回调,此时 previous 为 0，之后 previous 值为上一次时间戳
+            // 如果程序设定第一个回调不是立即执行的（options.leading === false）
+            // 则将 previous 值设为 now 的时间戳,跳过第一次执行
             if (!previous && options.leading === false)
                 previous = now;
             // 距离下次触发 func 还需要等待的时间
             var remaining = wait - (now - previous);
             context = this;
             args = arguments;
-            // 要么是到了间隔时间了，随即触发方法（remaining <= 0）
-            // 要么是没有传入 {leading: false}，且第一次触发回调，即立即触发
-            // 此时 previous 为 0，wait - (now - previous) 也满足 <= 0
-            // 之后便会把 previous 值迅速置为 now
+            // remaining<=0代表等待时间已经够久了，可以立即执行函数
+            // 注意，传入 {leading: false}的第一次调用的情况下
+            // previous 为 0，wait - (now - previous) 也满足 <= 0
             // ========= //
             // remaining > wait，表示客户端系统时间被调整过
             // 则马上执行 func 函数
@@ -1819,7 +1814,8 @@
             if (remaining <= 0 || remaining > wait) {
                 if (timeout) {
                     clearTimeout(timeout);
-                    // 解除引用，防止内存泄露
+                    // clearTimeout(timeout)后，timeout的值并不会清空，
+                    // 如果不设置为null，就不能根据!timeout重置引用
                     timeout = null;
                 }
                 // 重置前一次触发的时间戳
@@ -1827,11 +1823,13 @@
                 // 触发方法
                 // result 为该方法返回值
                 result = func.apply(context, args);
+                // console.log("pre");
                 // 引用置为空，防止内存泄露
                 // 感觉这里的 timeout 肯定是 null 啊？这个 if 判断没必要吧？
                 if (!timeout)
                     context = args = null;
             } else if (!timeout && options.trailing !== false) { // 最后一次需要触发的情况
+                // 所有的结束后，timeout的定时器应该被设置为null
                 // 如果已经存在一个定时器，则不会进入该 if 分支
                 // 如果 {trailing: false}，即最后一次不需要触发了，也不会进入这个分支
                 // 间隔 remaining milliseconds 后触发 later 方法
@@ -1847,31 +1845,30 @@
     // N milliseconds. If `immediate` is passed, trigger the function on the
     // leading edge, instead of the trailing.
     // 函数去抖（连续事件触发结束后只触发一次）
+    // 函数去抖的意思是，在多次连续调用同一个函数时，在最后一次调用的wait时间过后真正调用该函数
     // sample 1: _.debounce(function(){}, 1000)
     // 连续事件结束后的 1000ms 后触发
     // sample 1: _.debounce(function(){}, 1000, true)
-    // 连续事件触发后立即触发（此时会忽略第二个参数）
+    // 连续事件第一次触发后立即触发（此时会忽略第二个参数）
+    // 实现方法：在多次连续调用的每一次都设置setTimeout，直到最后一次调用的wait时间后，由setTimeout执行函数
     _.debounce = function(func, wait, immediate) {
         var timeout, args, context, timestamp, result;
 
         var later = function() {
-            // 定时器设置的回调 later 方法的触发时间，和连续事件触发的最后一次时间戳的间隔
-            // 如果间隔为 wait（或者刚好大于 wait），则触发事件
+            // 求出最后一次调用和现在时间的时间间隔
             var last = _.now() - timestamp;
 
             // 时间间隔 last 在 [0, wait) 中
-            // 还没到触发的点，则继续设置定时器
-            // last 值应该不会小于 0 吧？
+            // 还没到触发的点，则继续设置定时器，还需等待wait-last的时间
+            // 到时间后会重新调用later函数
             if (last < wait && last >= 0) {
                 timeout = setTimeout(later, wait - last);
             } else {
                 // 到了可以触发的时间点
                 timeout = null;
-                // 可以触发了
-                // 并且不是设置为立即触发的
-                // 因为如果是立即触发（callNow），也会进入这个回调中
-                // 主要是为了将 timeout 值置为空，使之不影响下次连续事件的触发
-                // 如果不是立即执行，随即执行 func 方法
+                //这里的if (!immediate)判断是因为，首先无论immediate的值是否设置，都会进入later函数
+                //但是immediate为true，那么在第一次调用时callNow也为true，他会在函数调用的时候直接执行
+                //这种情况下就不用重复执行了
                 if (!immediate) {
                     // 执行 func 函数
                     result = func.apply(context, args);
@@ -1883,17 +1880,14 @@
             }
         };
 
-        // 嗯，闭包返回的函数，是可以传入参数的
-        // 也是 DOM 事件所触发的回调函数
+
         return function() {
-            // 可以指定 this 指向
             context = this;
             args = arguments;
 
-            // 每次触发函数，更新时间戳
-            // later 方法中取 last 值时用到该变量
-            // 判断距离上次触发事件是否已经过了 wait seconds 了
-            // 即我们需要距离最后一次事件触发 wait seconds 后触发这个回调方法
+            // 每次调用函数，更新timestamp
+            // timestamp会在later 方法中用到
+            // timestamp在多次调用的情况下，是最后一次的调用时间
             timestamp = _.now();
 
             // 立即触发需要满足两个条件
@@ -1904,13 +1898,13 @@
             var callNow = immediate && !timeout;
 
             // 设置 wait seconds 后触发 later 方法
-            // 无论是否 callNow（如果是 callNow，也进入 later 方法，去 later 方法中判断是否执行相应回调函数）
+            // 无论是否 callNow（如果是 callNow，也进入 later 方法，在 later 方法中判断是否执行相应回调函数）
             // 在某一段的连续触发中，只会在第一次触发时进入这个 if 分支中
             if (!timeout)
             // 设置了 timeout，所以以后不会进入这个 if 分支了
                 timeout = setTimeout(later, wait);
 
-            // 如果是立即触发
+            // 立即出发会在第一次执行这个函数时就直接执行
             if (callNow) {
                 // func 可能是有返回值的
                 result = func.apply(context, args);
@@ -1925,7 +1919,15 @@
     // Returns the first function passed as an argument to the second,
     // allowing you to adjust arguments, run code before and after, and
     // conditionally execute the original function.
+    //var hello = function(name) { return "hello: " + name; };
+    //     hello = _.wrap(hello, function(func) {
+    //         return "before, " + func("moe") + ", after";
+    //     });
+    //     hello();
+    // => 'before, hello: moe, after'
+    //将function 封装到函数 wrapper 里面
     _.wrap = function(func, wrapper) {
+        //相当于将func当做参数传递给wrapper
         return _.partial(wrapper, func);
     };
 
@@ -1948,6 +1950,12 @@
     // _.compose(*functions)
     // var tmp = _.compose(f, g, h)
     // tmp(args) => f(g(h(args)))
+    //复合函数:一个函数执行完之后把返回的结果再作为参数赋给下一个函数来执行.
+    //var greet    = function(name){ return "hi: " + name; };
+    //     var exclaim  = function(statement){ return statement.toUpperCase() + "!"; };
+    //     var welcome = _.compose(greet, exclaim);
+    //     welcome('moe');
+    // => 'hi: MOE!'
     _.compose = function() {
         var args = arguments; // funcs
         var start = args.length - 1; // 倒序调用
@@ -1967,11 +1975,9 @@
     // 有什么用呢？
     // 如果有 N 个异步事件，所有异步执行完后执行该回调，即 func 方法（联想 eventproxy）
     // _.after 会返回一个函数
-    // 当这个函数第 times 被执行的时候
-    // 触发 func 方法
+    // 当这个函数至少被调用 times 后才真正执行
     _.after = function(times, func) {
         return function() {
-            // 函数被触发了 times 了，则执行 func 函数
             // 事实上 times 次后如果函数继续被执行，也会触发 func
             if (--times < 1) {
                 return func.apply(this, arguments);
@@ -2090,7 +2096,7 @@
         if (nativeKeys) return nativeKeys(obj);
 
         var keys = [];
-        //下面这个循环会将可数的，并且是自己的键（不是原型链上的键）push进keys
+        //下面这个循环会将可数的，并且是自己的不是原型链上的 key push进keys
         //for in会遍历原型链上的可数属性
         // own enumerable properties
         for (var key in obj)
@@ -2156,9 +2162,13 @@
     // Returns the results of applying the iteratee to each element of the object
     // In contrast to _.map it returns an object
     // 跟 _.map 方法很像
-    // 但是是专门为对象服务的 map 方法
+    // 但是用于对象
     // 迭代函数改变对象的 values 值
     // 返回对象副本
+    //_.mapObject({start: 5, end: 12}, function(val, key) {
+    //     return val + 5;
+    // });
+    // => {start: 10, end: 17}
     _.mapObject = function(obj, iteratee, context) {
         // 迭代函数
         // 对每个键值对进行迭代
@@ -2174,6 +2184,7 @@
             // key 值不变
             // 对每个 value 值用迭代函数迭代
             // 返回经过函数运算后的值
+            // iteratee(value,key,obj)
             results[currentKey] = iteratee(obj[currentKey], currentKey, obj);
         }
         return results;
@@ -2199,11 +2210,13 @@
     // 需要注意的是，value 值不能重复（不然后面的会覆盖前面的）
     // 且新构造的对象符合对象构造规则
     // 并且返回新构造的对象
+    //_.invert({Moe: "Moses", Larry: "Louis", Curly: "Jerome"});
+    // => {Moses: "Moe", Louis: "Larry", Jerome: "Curly"};
     _.invert = function(obj) {
-        // 返回的新的对象
         var result = {};
         var keys = _.keys(obj);
         for (var i = 0, length = keys.length; i < length; i++) {
+            // result[value]=key;
             result[obj[keys[i]]] = keys[i];
         }
         return result;
@@ -2211,18 +2224,14 @@
 
     // Return a sorted list of the function names available on the object.
     // Aliased as `methods`
-    // 传入一个对象
-    // 遍历该对象的键值对（包括 own properties 以及 原型链上的）
-    // 如果某个 value 的类型是方法（function），则将该 key 存入数组
-    // 将该数组排序后返回
+    // 返回一个对象里所有的方法名（function）, 而且是已经排序的,（包括 own properties 以及 原型链上的）
+    //_.functions(_);
+    // => ["all", "any", "bind", "bindAll", "clone", "compact", "compose" ...
     _.functions = _.methods = function(obj) {
         // 返回的数组
         var names = [];
-
-        // if IE < 9
-        // 且对象重写了 `nonEnumerableProps` 数组中的某些方法
-        // 那么这些方法名是不会被返回的
-        // 可见放弃了 IE < 9 可能对 `toString` 等方法的重写支持
+        // for in 循环会遍历包括对象原型链上的可数属性，在IE<9有一些属性无法遍历到，但是这里没有处理
+        // 所以在IE<9下，有些属性被放弃了，其实可以直接使用_.keys
         for (var key in obj) {
             // 如果某个 key 对应的 value 值类型是函数
             // 则将这个 key 值存入数组
@@ -2294,13 +2303,14 @@
 
         // 如果第二个参数是函数
         if (_.isFunction(oiteratee)) {
+            //只有在oiteratee是function的情况下，第三个参数才是context
             keys = _.allKeys(obj);
             iteratee = optimizeCb(oiteratee, context);
         } else {
             // 如果第二个参数不是函数
             // 则后面的 keys 可能是数组
             // 也可能是连续的几个并列的参数
-            // 用 flatten 将它们展开
+            // 用 flatten 将它们展开,startIndex=1
             keys = flatten(arguments, false, false, 1);
 
             // 也转为 predicate 函数判断形式
@@ -2330,6 +2340,8 @@
         } else {
             var keys = _.map(flatten(arguments, false, false, 1), String);
             iteratee = function(value, key) {
+                //返回key是否在keys中的非
+                //_.contains(list, value, [fromIndex])
                 return !_.contains(keys, key);
             };
         }

@@ -23,8 +23,8 @@
       <file leaf-file-name="underscore.js" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/underscore.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="482">
-              <caret line="1737" column="39" lean-forward="true" selection-start-line="1737" selection-start-column="39" selection-end-line="1737" selection-end-column="39" />
+            <state relative-caret-position="269">
+              <caret line="2339" column="0" lean-forward="false" selection-start-line="2339" selection-start-column="0" selection-end-line="2339" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -33,8 +33,8 @@
       <file leaf-file-name="test.html" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/test.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="611">
-              <caret line="22" column="51" lean-forward="true" selection-start-line="22" selection-start-column="8" selection-end-line="22" selection-end-column="51" />
+            <state relative-caret-position="851">
+              <caret line="23" column="8" lean-forward="false" selection-start-line="23" selection-start-column="8" selection-end-line="23" selection-end-column="8" />
               <folding />
             </state>
           </provider>
@@ -51,17 +51,11 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>_.filter</find>
-      <find>_.matcher</find>
-      <find>_.find</find>
-      <find>_.random</find>
-      <find>_.identity</find>
       <find>_.values</find>
       <find>identity</find>
       <find>filter</find>
       <find>each</find>
       <find>isArrayLike</find>
-      <find>flatten</find>
       <find>isArray</find>
       <find>isArguments</find>
       <find>toString</find>
@@ -76,11 +70,17 @@
       <find>map</find>
       <find>_.property</find>
       <find>property</find>
-      <find>_.map</find>
       <find>executeBound</find>
       <find>sourceFunc</find>
       <find>baseCreate</find>
       <find>_.bind</find>
+      <find>console</find>
+      <find>_.partial</find>
+      <find>nonEnumerableProps</find>
+      <find>collectNonEnumProps</find>
+      <find>flatten</find>
+      <find>String</find>
+      <find>_.map</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -174,12 +174,12 @@
       <workItem from="1512547965580" duration="13037000" />
       <workItem from="1513056428516" duration="105000" />
       <workItem from="1516771004064" duration="29817000" />
-      <workItem from="1516985809906" duration="12255000" />
+      <workItem from="1516985809906" duration="42219000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="86644000" />
+    <option name="totallyTimeSpent" value="116608000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-9" y="-9" width="1938" height="1050" extended-state="6" />
@@ -372,16 +372,16 @@
     <entry file="file://$PROJECT_DIR$/test1.html" />
     <entry file="file://$PROJECT_DIR$/test.html">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="611">
-          <caret line="22" column="51" lean-forward="true" selection-start-line="22" selection-start-column="8" selection-end-line="22" selection-end-column="51" />
+        <state relative-caret-position="851">
+          <caret line="23" column="8" lean-forward="false" selection-start-line="23" selection-start-column="8" selection-end-line="23" selection-end-column="8" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/underscore.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="482">
-          <caret line="1737" column="39" lean-forward="true" selection-start-line="1737" selection-start-column="39" selection-end-line="1737" selection-end-column="39" />
+        <state relative-caret-position="269">
+          <caret line="2339" column="0" lean-forward="false" selection-start-line="2339" selection-start-column="0" selection-end-line="2339" selection-end-column="0" />
           <folding />
         </state>
       </provider>

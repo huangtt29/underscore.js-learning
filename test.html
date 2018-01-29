@@ -11,6 +11,8 @@
         // 区分数组,普通对象
         <!--bind-->
         <!--_.isArguments-->
+        <!--节流去抖-->
+
     </p>
     <p></p>
 
@@ -19,8 +21,7 @@
 <script>
 
     window.onload=function () {
-
-        _.delay(console.log, 1000, 'logged later');
+        _.omit({name: 'moe', age: 50, userid: 'moe1'}, 'userid');
     }
 </script>
 </body>
