@@ -61,27 +61,23 @@
     // `_` 其实是一个构造函数
     // 支持无 new 调用的构造函数（思考 jQuery 的无 new 调用）
     // 将传入的参数（实际要操作的数据）赋值给 this._wrapped 属性
-    // 使用new调用时，_ 相当于一个构造函数，_是一个构造函数，this指向新创建的对象。
-    //如果不用new调用而直接调用，那么this指向全局作用域（相当于root）
-    //那么直接new一个新实例返回。
     // each 等方法都在该构造函数的原型链上
     // _([1, 2, 3]).each(alert)
     // _([1, 2, 3]) 相当于无 new 构造了一个新的对象
     // 调用了该对象的 each 方法，该方法在该对象构造函数的原型链上
     var _ = function(obj) {
-        // 以下均针对 OOP 形式的调用
-        // 如果是非 OOP 形式的调用，不会进入该函数内部
 
-        // 如果 obj 已经是 `_` 函数的实例，则直接返回 obj
+        // 使用new调用时，new _(obj)this指向新创建的对象。obj instanceof _ => true,直接返回这个对象
         if (obj instanceof _)
             return obj;
 
-        // 如果不是 `_` 函数的实例
-        // 则调用 new 运算符，返回实例化的对象
+        // 如果不用new调用而直接调用，比如，_({1,2,3}),那么this指向全局作用域（root）,this instanceof _ => false;
+        // 如果是直接调用的情况下，直接new一个新的obj返回，注意也调用了_这个构造函数，所以还是会重新调用一次这个函数
         if (!(this instanceof _))
             return new _(obj);
 
-        // 将 obj 赋值给 this._wrapped 属性，疑问：什么时候会执行到这里？
+        // 不是new调用的情况下，将 obj 赋值给 this._wrapped 属性
+        // _wrapped记录了obj
         this._wrapped = obj;
     };
 
@@ -2385,8 +2381,8 @@
         if (!_.isObject(obj))
             return obj;
 
-        // 如果是数组，则用 obj.slice() 返回数组副本
-        // 如果是对象，则提取所有 obj 的键值对覆盖空对象，返回
+        // 如果是数组，则用 obj.slice() 返回数组副本,也就是返回一个新数组副本
+        // 如果是对象，则提取所有 obj 的键值对覆盖空对象，返回一个新对象副本
         return _.isArray(obj) ? obj.slice() : _.extend({}, obj);
     };
 
@@ -2411,6 +2407,9 @@
     // attrs 参数为一个对象
     // _.isMatch(object, attrs)判断 object 对象中是否有 attrs 中的所有 key-value 键值对，object的键值对是否包含attrs的键值对
     // 返回布尔值
+    //var stooge = {name: 'moe', age: 32};
+    //     _.isMatch(stooge, {age: 32});
+    // => true
     _.isMatch = function(object, attrs) {
         // 提取 attrs 对象的所有 keys
         var keys = _.keys(attrs), length = keys.length;
@@ -2438,18 +2437,19 @@
 
 
     // Internal recursive comparison function for `isEqual`.
-    // "内部的"/ "递归地"/ "比较"
-    // 该内部方法会被递归调用
+    // 递归比较两个对象是否相等
     var eq = function(a, b, aStack, bStack) {
         // Identical objects are equal. `0 === -0`, but they aren't identical.
         // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
-        // a === b 时
-        // 需要注意 `0 === -0` 这个 special case
-        // 0 和 -0 被认为不相同（unequal）
+        // 需要注意虽然`0 === -0` ，但是在underscore中，0 和 -0 被认为不相同（unequal）
         // 至于原因可以参考上面的链接
+
+        // 判断a===b时，是不是-0和0的特殊情况。1/0=>Infinity.1/-0 => -Infinity
         if (a === b) return a !== 0 || 1 / a === 1 / b;
 
         // A strict comparison is necessary because `null == undefined`.
+        // 对存在null或undefined的比较需要使用严格的===
+        // null == undefined =>true, null === undefined =>true
         // 如果 a 和 b 有一个为 null（或者 undefined）
         // 判断 a === b
         if (a == null || b == null) return a === b;
@@ -2465,7 +2465,6 @@
         var className = toString.call(a);
 
         // 如果 a 和 b 类型不相同，则返回 false
-        // 类型都不同了还比较个蛋！
         if (className !== toString.call(b)) return false;
 
         switch (className) {
@@ -2476,20 +2475,19 @@
             case '[object String]':
                 // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
                 // equivalent to `new String("5")`.
+                // "5"===new String("5") =>false
+                // ''+"5"===new String("5")+'' =>true
                 // 转为 String 类型进行比较
                 return '' + a === '' + b;
 
-            // RegExp 和 String 可以看做一类
-            // 如果 obj 为 RegExp 或者 String 类型
-            // 那么 '' + obj 会将 obj 强制转为 String
-            // 根据 '' + a === '' + b 即可判断 a 和 b 是否相等
             // ================
 
             case '[object Number]':
                 // `NaN`s are equivalent, but non-reflexive.
                 // Object(NaN) is equivalent to NaN
-                // 如果 +a !== +a
-                // 那么 a 就是 NaN
+                // NaN === NaN =>false
+                // NaN !== NaN => true
+                // 如果 +a !== +a,那么 a 就是 NaN
                 // 判断 b 是否也是 NaN 即可
                 if (+a !== +a) return +b !== +b;
 
@@ -2499,7 +2497,7 @@
                 // 用 +a 将 Number() 形式转为基本类型
                 // 即 +Number(1) ==> 1
                 // 0 需要特判
-                // 如果 a 为 0，判断 1 / +a === 1 / b
+                // 如果 a 为 0，判断 1 / +a === 1 / b =>判断0 -0
                 // 否则判断 +a === +b
                 return +a === 0 ? 1 / +a === 1 / b : +a === +b;
 
@@ -2520,8 +2518,6 @@
             // 那么 +obj 会将 obj 转为 Number 类型
             // 然后比较即可
             // +new Date() 是当前时间距离 1970 年 1 月 1 日 0 点的毫秒数
-            // +true => 1
-            // +new Boolean(false) => 0
         }
 
 
@@ -2532,19 +2528,23 @@
         if (!areArrays) {
             // 如果 a 不是 object 或者 b 不是 object
             // 则返回 false
+            // typeof [1] =>object
             if (typeof a != 'object' || typeof b != 'object') return false;
 
             // 通过上个步骤的 if 过滤
-            // !!保证到此的 a 和 b 均为对象!!
+            // 保证到此的 a 和 b 均为对象，然后判断两个对象是否相同
+            // 如果两个对象的构造函数不相同，并且他们的构造函数不是Object构造函数的情况下 => 两个对象不相同
+            // 也就是说在两个对象的构造函数不相同的情况下，两个对象还是可能相同，比如：
+            // var attrs = Object.create(null);
+            // attrs.name = "Bob";
+            // console.log(_.isEqual(attrs, {name: "Bob"})); =>  true
 
             // Objects with different constructors are not equivalent, but `Object`s or `Array`s
             // from different frames are.
-            // 通过构造函数来判断 a 和 b 是否相同
-            // 但是，如果 a 和 b 的构造函数不同
-            // 也并不一定 a 和 b 就是 unequal
-            // 比如 a 和 b 在不同的 iframes 中！
-            // aCtor instanceof aCtor 这步有点不大理解，啥用？
+
+            // Object instanceof Object =>true ,如果aCtor instanceof aCtor =>true,那么aCtor是构造函数Object
             var aCtor = a.constructor, bCtor = b.constructor;
+            // 如果两个对象的构造函数不相同，并且两个构造函数都不是Object，那么返回false
             if (aCtor !== bCtor && !(_.isFunction(aCtor) && aCtor instanceof aCtor &&
                 _.isFunction(bCtor) && bCtor instanceof bCtor)
                 && ('constructor' in a && 'constructor' in b)) {
@@ -2557,27 +2557,41 @@
 
         // Initializing stack of traversed objects.
         // It's done here since we only need them for objects and arrays comparison.
+
         // 第一次调用 eq() 函数，没有传入 aStack 和 bStack 参数
         // 之后递归调用都会传入这两个参数
         aStack = aStack || [];
         bStack = bStack || [];
-
+        //每次递归都取得a栈的长度
         var length = aStack.length;
 
+        // 检查是否有循环引用的部分
+        // 比如：
+        // a = {foo: null};
+        // a.foo = a;
+        // console.log(a===a.foo); =>true
+        // 如果是循环引用，那么在引用回原对象的时候，会检测到 aStack[length] ===a
         while (length--) {
             // Linear search. Performance is inversely proportional to the number of
             // unique nested structures.
             if (aStack[length] === a) return bStack[length] === b;
         }
-
+        // console.log(b);
         // Add the first object to the stack of traversed objects.
+        // 每次递归都把那次递归的a,b push 进两个栈
         aStack.push(a);
         bStack.push(b);
 
         // Recursively compare objects and arrays.
+        // 下面递归地判断数组和对象
         // 将嵌套的对象和数组展开
         // 如果 a 是数组
         // 因为嵌套，所以需要展开深度比较
+        // a = { foo: { b: { foo: { c: { foo: null } } } } };
+        // b = { foo: { b: { foo: { c: { foo: null } } } } };
+        // a.foo.b.foo.c.foo = a;
+        // b.foo.b.foo.c.foo = b;
+        // console.log(eq(a, b)) => true
         if (areArrays) {
             // Compare array lengths to determine if a deep comparison is necessary.
             // 根据 length 判断是否应该继续递归对比
@@ -2589,8 +2603,10 @@
             if (length !== b.length) return false;
 
             // Deep compare the contents, ignoring non-numeric properties.
+            // 递归比较数组中的每一项，忽略不可数的项
             while (length--) {
-                // 递归
+
+
                 if (!eq(a[length], b[length], aStack, bStack)) return false;
             }
         } else {
@@ -2601,16 +2617,15 @@
             // 两个对象的深度比较
             var keys = _.keys(a), key;
             length = keys.length;
-
+            console.log(length);
             // Ensure that both objects contain the same number of properties before comparing deep equality.
             // a 和 b 对象的键数量不同
-            // 那还比较毛？
             if (_.keys(b).length !== length) return false;
 
             while (length--) {
                 // Deep compare each member
-                // 递归比较
                 key = keys[length];
+                // 如果b中也有这个key的话，递归比较
                 if (!(_.has(b, key) && eq(a[key], b[key], aStack, bStack))) return false;
             }
         }
@@ -2624,8 +2639,6 @@
         aStack.pop();
         bStack.pop();
 
-        // 深度搜索递归比较完毕
-        // 放心地 return true
         return true;
     };
 
@@ -2657,10 +2670,11 @@
 
 
     // Is a given value a DOM element?
-    // 判断是否为 DOM 元素
+    // 判断是否为 DOM 元素节点，比如 p div 等
     _.isElement = function(obj) {
         // 确保 obj 不是 null, undefined 等假值
         // 并且 obj.nodeType === 1
+        // !!用来将表达式强制转换为布尔类型的数据（boolean）
         return !!(obj && obj.nodeType === 1);
     };
 
@@ -2673,10 +2687,11 @@
 
     // Is a given variable an object?
     // 判断是否为对象
-    // 这里的对象包括 function 和 object,并且不是空对象
+    // 这里的对象包括 function 和 object,并且不包括空对象
     _.isObject = function(obj) {
         var type = typeof obj;
-        //!!obj将obj转换成布尔类型，保证obj不是null（alert(typeof null);=>object）
+        //!!obj将obj转换成布尔类型，保证obj不是null
+        // typeof null =>object
         return type === 'function' || type === 'object' && !!obj;
     };
 
@@ -2704,6 +2719,7 @@
     // Optimize `isFunction` if appropriate. Work around some typeof bugs in old v8,
     // IE 11 (#1621), and in Safari 8 (#1929).
     // _.isFunction 在 old v8, IE 11 和 Safari 8 下的兼容
+
     // 觉得这里有点问题
     // 我用的 chrome 49 (显然不是 old v8)
     // 却也进入了这个 if 判断内部
