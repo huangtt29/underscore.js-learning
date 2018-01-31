@@ -21,8 +21,8 @@
     var root = this;
 
     // Save the previous value of the `_` variable.
-    // 将原来全局环境中的变量 `_` 赋值给变量 previousUnderscore 进行缓存
-    // 在后面的 noConflict 方法中有用到
+    // 在全局变量中的_被占用的情况下，将root._先缓存下来，然后在noConflict函数中恢复
+    // 如果没有被占用的话，那就是undefined
     var previousUnderscore = root._;
 
     // Save bytes in the minified (but not gzipped) version:
@@ -75,6 +75,8 @@
         // 如果是直接调用的情况下，直接new一个新的obj返回，注意也调用了_这个构造函数，所以还是会重新调用一次这个函数
         if (!(this instanceof _))
             return new _(obj);
+
+
 
         // 不是new调用的情况下，将 obj 赋值给 this._wrapped 属性
         // _wrapped记录了obj
@@ -523,7 +525,7 @@
     // 如果是，则返回 ture；否则返回 false（有一个不满足就返回 false）
     // _.every(list, [predicate], [context])
     _.every = _.all = function(obj, predicate, context) {
-        // 绑定predicate的this指向context，如果没有context则默认绑定到root
+        // 绑定predicate的this指向context，如果没有this默认指向构造函数"_"
         predicate = cb(predicate, context);
 
         var keys = !isArrayLike(obj) && _.keys(obj),
@@ -547,7 +549,7 @@
     // 如果是则返回 true；否则返回 false
     // _.some(list, [predicate], [context])
     _.some = _.any = function(obj, predicate, context) {
-        // 绑定predicate的this指向context，如果没有context则默认绑定到root
+        // 绑定predicate的this指向context，如果没有this默认指向构造函数"_"
         predicate = cb(predicate, context);
         // 如果传参是对象，则返回该对象的 keys 数组
         var keys = !isArrayLike(obj) && _.keys(obj),
@@ -1932,9 +1934,6 @@
     // 即该方法可以对原来的 predicate 迭代结果值取补集
     _.negate = function(predicate) {
         return function() {
-            // alert(this===root);=>true.this绑定在root上
-            //所有函数默认都将this绑定到root上，除非人为改变context
-            //但是_.negate不提供改变context的方法
             return !predicate.apply(this, arguments);
 
         };
@@ -2718,16 +2717,16 @@
 
     // Optimize `isFunction` if appropriate. Work around some typeof bugs in old v8,
     // IE 11 (#1621), and in Safari 8 (#1929).
-    // _.isFunction 在 old v8, IE 11 和 Safari 8 下的兼容
-
-    // 觉得这里有点问题
-    // 我用的 chrome 49 (显然不是 old v8)
-    // 却也进入了这个 if 判断内部
-
+    // 使用typeof 优化_.isFunction，同时兼容 old v8, IE 11 和 Safari 8
+    // 只有在typeof /./ !=='function'&&typeof Int8Array !== 'object'的情况下使用typeof
+    // 因为typeof的效率更高
     // typeof /s/ === 'function'; // Chrome 1-12 , 不符合 ECMAScript 5.1
     // typeof /s/ === 'object'; // Firefox 5+ , 符合 ECMAScript 5.1
     if (typeof /./ != 'function' && typeof Int8Array != 'object') {
         _.isFunction = function(obj) {
+            // https://github.com/hanzichi/underscore-analysis/issues/31
+            // 解释了为什么需要 ||false
+            // 貌似是为了解决IE下的 JIT bug
             return typeof obj == 'function' || false;
         };
     }
@@ -2739,16 +2738,21 @@
     };
 
     // Is the given value `NaN`? (NaN is the only number which does not equal itself).
-    // 判断是否是 NaN
-    // NaN 是唯一的一个 `自己不等于自己` 的 number 类型
-    // 这样写有 BUG
+    // 判断是否是 NaN，NaN 是唯一的一个 `自己不等于自己` 的 number 类型
+    // 最新版本（edge 版）已经修复该 BUG，如下
+    _.isNaN = function(obj) {
+        return _.isNumber(obj) && isNaN(obj);
+    };
+    // 下面的实现有bug的
     // _.isNaN(new Number(0)) => true
     // 详见 https://github.com/hanzichi/underscore-analysis/issues/13
-    // 最新版本（edge 版）已经修复该 BUG
-
-    _.isNaN = function(obj) {
-        return _.isNumber(obj) && obj !== +obj;
-    };
+    // _.isNaN = function(obj) {
+    //     // console.log(_.isNumber(obj));
+    //     // console.log(obj!==+obj);
+    //     console.log(obj);
+    //     console.log(+obj);
+    //     return _.isNumber(obj) && obj !== +obj;
+    // };
 
     // Is a given value a boolean?
     // 判断是否是布尔值
@@ -2793,13 +2797,16 @@
 
     // Run Underscore.js in *noConflict* mode, returning the `_` variable to its
     // previous owner. Returns a reference to the Underscore object.
-    // 如果全局环境中已经使用了 `_` 变量
-    // 可以用该方法返回其他变量
-    // 继续使用 underscore 中的方法
+    // 如果全局环境中已经使用了 `_` 变量，放弃Underscore 的控制变量"_"。返回Underscore 对象的引用。
     // var underscore = _.noConflict();
     // underscore.each(..);
+    // var previousUnderscore = root._
     _.noConflict = function() {
+        //恢复原来的root._
         root._ = previousUnderscore;
+        // _.noConflict()调用时，这里的this指向构造函数"_"
+        // 为什么指向构造函数呢
+        // 因为他们都是构造函数上的属性
         return this;
     };
 
@@ -2812,6 +2819,10 @@
     };
 
     // Predicate-generating functions. Often useful outside of Underscore.
+    // 创建一个函数，这个函数 返回相同的值
+    // var stooge = {name: 'moe'};
+    //     stooge === _.constant(stooge)();
+    // => true
     _.constant = function(value) {
         return function() {
             return value;
@@ -2853,8 +2864,9 @@
     };
 
     // Run a function **n** times.
-    // 执行某函数 n 次
+    // 调用给定的迭代函数n次,每一次调用iteratee传递index参数。生成一个返回值的数组。
     _.times = function(n, iteratee, context) {
+        //accum>=0
         var accum = Array(Math.max(0, n));
         iteratee = optimizeCb(iteratee, context, 1);
         for (var i = 0; i < n; i++)
@@ -2864,13 +2876,12 @@
 
     // Return a random integer between min and max (inclusive).
     // I don't think we do want to "support" this case,
-    //这个函数在你传入浮点数的时候会返回浮点数，作者作出如下解释：
+    // 这个函数在你传入浮点数的时候会返回浮点数，作者作出如下解释：
     // because the function is supposed to work with integers.
     // If we were returning a random float between min and max, this would be different.
     // Instead, you can round before you call random
-    //
     // 传入两个参数的情况下返回一个 [min, max]范围内的任意整数
-    //如果只有一个参数，则返回一个[0,min]范围的整数
+    // 如果只有一个参数，则返回一个[0,min]范围的整数
     _.random = function(min, max) {
         if (max == null) {
             max = min;
@@ -2882,9 +2893,9 @@
     };
 
     // A (possibly faster) way to get the current timestamp as an integer.
-    // 返回当前时间的 "时间戳"（单位 ms）
-    // 其实并不是时间戳，时间戳还要除以 1000（单位 s）
-    // +new Date 类似
+    // 返回当前时间的整数 "时间戳"（单位 ms）
+    // _.now();
+    // => 1392066795351
     _.now = Date.now || function() {
             return new Date().getTime();
         };
@@ -2921,12 +2932,14 @@
         // 正则替换
         // 注意下 ?:
         var source = '(?:' + _.keys(map).join('|') + ')';
-
+        // source=> (?:&|<|>|"|'|`)
         // 正则 pattern
         var testRegexp = RegExp(source);
-
+        // testRegexp => /(?:&|<|>|"|'|`)/
         // 全局替换
         var replaceRegexp = RegExp(source, 'g');
+        // replaceRegexp => /(?:&|<|>|"|'|`)/g
+
         return function(string) {
             string = string == null ? '' : '' + string;
             return testRegexp.test(string) ? string.replace(replaceRegexp, escaper) : string;
@@ -2944,6 +2957,8 @@
 
     // If the value of the named `property` is a function then invoke it with the
     // `object` as context; otherwise, return it.
+    // 如果指定的property 的值是一个函数，那么将在object上下文内调用它;否则，返回它。
+    // 如果提供默认值，并且属性不存在，那么默认值将被返回。如果设置defaultValue是一个函数，它的结果将被返回。
     _.result = function(object, property, fallback) {
         var value = object == null ? void 0 : object[property];
         if (value === void 0) {
@@ -2970,8 +2985,11 @@
     // 3. <%- %> - to print some values HTML escaped
     _.templateSettings = {
         // 三种渲染模板
+        // 执行
         evaluate    : /<%([\s\S]+?)%>/g,
+        // 插入
         interpolate : /<%=([\s\S]+?)%>/g,
+        // 编码
         escape      : /<%-([\s\S]+?)%>/g
     };
 
@@ -2988,13 +3006,14 @@
         '\r':     'r',  // 回车符
         '\n':     'n',  // 换行符
         // http://stackoverflow.com/questions/16686687/json-stringify-and-u2028-u2029-check
-        '\u2028': 'u2028', // Line separator
-        '\u2029': 'u2029'  // Paragraph separator
+        '\u2028': 'u2028', // Line separator 行分隔符
+        '\u2029': 'u2029'  // Paragraph separator  段落分隔符
     };
 
     // RegExp pattern
     var escaper = /\\|'|\r|\n|\u2028|\u2029/g;
 
+    // 转义字符
     var escapeChar = function(match) {
         /**
          '      => \\'
@@ -3013,12 +3032,24 @@
     // and correctly escapes quotes within interpolated code.
     // NB: `oldSettings` only exists for backwards compatibility.
     // oldSettings 参数为了兼容 underscore 旧版本
-    // setting 参数可以用来自定义字符串模板（但是 key 要和 _.templateSettings 中的相同，才能 overridden）
+    // setting 参数可以用来自定义字符串模板（但是 key 要和 _.templateSettings 中的相同，才能覆盖）
     // 1. <%  %> - to execute some code
     // 2. <%= %> - to print some value in template
     // 3. <%- %> - to print some values HTML escaped
     // Compiles JavaScript templates into functions
     // _.template(templateString, [settings])
+    // var compiled = _.template("hello: <%= name %>");
+    //     compiled({name: 'moe'});
+    // => "hello: moe"
+    //
+    //     var template = _.template("<b><%- value %></b>");
+    //     template({value: '<script>'});
+    // => "<b>&lt;script&gt;</b>"
+
+    // var settings = {
+    //     interpolate: /\{\{(.+?)\}\}/g  // 会覆盖_.templateSettings.interpolate
+    // };
+    // var template = _.template("Hello {{ name }}!", settings);//通过settings传入规则
     _.template = function(text, settings, oldSettings) {
         // 兼容旧版本
         if (!settings && oldSettings)

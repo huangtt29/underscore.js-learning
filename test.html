@@ -14,6 +14,8 @@
         <!--节流去抖-->
         <!--equal-->
         <!--new 与 无new调用-->
+        <!--NaN-->
+        <!--hasOwnProperty for in-->
 
     </p>
     <p></p>
@@ -23,15 +25,8 @@
 <script>
 
     window.onload=function () {
-        a = {foo: null};
-        b = {fo: null};
-        a.foo = a;
-        b.fo = b;
-        // console.log(a===a.foo);
-
-        console.log(_.isEqual(a, b));
-        // console.log(_.isEqual(attrs, {name: "Bob"})); true
-        // console.log(_.isEqual(person, animal)); false
+        var object = {cheese: 'crumpets', stuff: function(){ return 'nonsense'; }};
+        console.log(_.result(object, 'meat', 'ham'));
 
     }
 </script>
