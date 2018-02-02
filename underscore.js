@@ -322,7 +322,7 @@
     // notice: 要避免传递带有一个数值类型 length 属性的对象
     // notice: _.each 方法不能用 return 跳出循环（同样，Array.prototype.forEach 也不行），因为使用for循环，一定会遍历一遍所有元素。
 
-    //遍历list中的所有元素，按顺序用每个元素当做参数调用 iteratee 函数。
+    // 遍历list中的所有元素，按顺序用每个元素当做参数调用 iteratee 函数。
     // 如果传递了context参数，则把iteratee绑定到context对象上。
     //each是否改变原函数，要看iteratee怎么实现
     _.each = _.forEach = function(obj, iteratee, context) {
@@ -337,6 +337,8 @@
         //这里默认没有人为定义对象额length属性，所以可以通过isArrayList来判断是否是对象。
         // 如果是类数组
         // 默认不会传入类似 {length: 10} 这样的数据
+        // console.log(iteratee);
+
         if (isArrayLike(obj)) {
             // 通过isArrayLike来判断为类数组
             for (i = 0, length = obj.length; i < length; i++) {
@@ -348,6 +350,7 @@
             //_.each({one: 1, two: 2, three: 3}, alert);
         // => alerts each number value in turn...
             var keys = _.keys(obj);
+
             // 如果是对象，则遍历处理 values 值
             for (i = 0, length = keys.length; i < length; i++) {
                 iteratee(obj[keys[i]], keys[i], obj); // (value, key, obj)
@@ -2985,21 +2988,23 @@
     // 3. <%- %> - to print some values HTML escaped
     _.templateSettings = {
         // 三种渲染模板
-        // 执行
+        // 执行 <% %>的正则表达式
         evaluate    : /<%([\s\S]+?)%>/g,
-        // 插入
+        // 插入 <%= %>
         interpolate : /<%=([\s\S]+?)%>/g,
-        // 编码
+        // 编码 <%- %>
         escape      : /<%-([\s\S]+?)%>/g
     };
 
     // When customizing `templateSettings`, if you don't want to define an
     // interpolation, evaluation or escaping regex, we need one that is
     // guaranteed not to match.
+
     var noMatch = /(.)^/;
 
     // Certain characters need to be escaped so that they can be put into a
     // string literal.
+    // 编码的字符
     var escapes = {
         "'":      "'",
         '\\':     '\\',
@@ -3011,9 +3016,10 @@
     };
 
     // RegExp pattern
+    // 匹配上诉编码的正则
     var escaper = /\\|'|\r|\n|\u2028|\u2029/g;
 
-    // 转义字符
+    // 转义字符，防止他们出现在文本中被直接执行
     var escapeChar = function(match) {
         /**
          '      => \\'
@@ -3046,12 +3052,29 @@
     //     template({value: '<script>'});
     // => "<b>&lt;script&gt;</b>"
 
-    // var settings = {
-    //     interpolate: /\{\{(.+?)\}\}/g  // 会覆盖_.templateSettings.interpolate
-    // };
-    // var template = _.template("Hello {{ name }}!", settings);//通过settings传入规则
+
+    // var compiled = _.template("hello: <%=  name %>  <%= name %>");
+    // console.log(compiled({name: 'moe'}));
+    // 经过template函数会得到下面的function：
+    // function(obj){
+    //     var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+    //     with(obj||{}){
+    //         __p+='hello: '+
+    //             ((__t=(  name ))==null?'':__t)+
+    //             '  '+
+    //             ((__t=( name ))==null?'':__t)+
+    //             '';
+    //     }
+    //     return __p;
+    // }
     _.template = function(text, settings, oldSettings) {
-        // 兼容旧版本
+        // text是输入的原文本
+
+        // 兼容旧版本，settings可以自己设置，比如
+        // var settings = {
+        //     interpolate: /\{\{(.+?)\}\}/g  // 会覆盖_.templateSettings.interpolate
+        // };
+        // var template = _.template("Hello {{ name }}!", settings);//通过settings传入规则
         if (!settings && oldSettings)
             settings = oldSettings;
 
@@ -3063,7 +3086,7 @@
         settings = _.defaults({}, settings, _.templateSettings);
 
         // Combine delimiters into one regular expression via alternation.
-        // 正则表达式 pattern，用于正则匹配 text 字符串中的模板字符串
+        // 正则表达式 pattern，用于正则匹配 text 字符串中的模板字符串(<% %> , <%= =%> , <%- %>)
         // /<%-([\s\S]+?)%>|<%=([\s\S]+?)%>|<%([\s\S]+?)%>|$/g
         // 注意最后还有个 |$
         var matcher = RegExp([
@@ -3074,36 +3097,39 @@
             ].join('|') + '|$', 'g');
 
         // Compile the template source, escaping string literals appropriately.
-        // 编译模板字符串，将原始的模板字符串替换成函数字符串
-        // 用拼接成的函数字符串生成函数（new Function(...)）
+        // 下面的步骤就是，即将输入的text中的模板字符串，替换成可以执行的语句，生成一个新的函数
+
+        // 开始匹配的下标
         var index = 0;
 
-        // source 变量拼接的字符串用来生成函数
-        // 用于当做 new Function 生成函数时的函数字符串变量
-        // 记录编译成的函数字符串，可通过 _.template(tpl).source 获取（_.template(tpl) 返回方法）
+        // 根据例子运行出来的结果，source 变量保存最后生成的函数的字符串形式
+        // __p是生成的函数中的一个变量，保存着已经替换完成的要输出的字符串
+        // 可通过 _.template(tpl).source 获取最后生成的函数
         var source = "__p+='";
 
         // replace 函数不需要为返回值赋值，主要是为了在函数内对 source 变量赋值
-        // 将 text 变量中的模板提取出来
-        // match 为匹配的整个串
-        // escape/interpolate/evaluate 为匹配的子表达式（如果没有匹配成功则为 undefined）
+        // text.replace的三个参数：
+        // match 为模式的匹配项
+        // escape/interpolate/evaluate 为第一个捕获组（escape）的匹配项、第二个捕获组（interpolate）的匹配项，第三个捕获组（evaluate）的匹配项
         // offset 为字符匹配（match）的起始位置（偏移量）
+        // replace函数会一直匹配到字符串末尾
         text.replace(matcher, function(match, escape, interpolate, evaluate, offset) {
-            // \n => \\n
+
+            // \n => \\n，首先先将text中匹配到的部分中需要转义的字符转义
             source += text.slice(index, offset).replace(escaper, escapeChar);
-            // 改变 index 值，为了下次的 slice
+
+            // 改变 index 值，为了下次的 slice ？？？？
             index = offset + match.length;
 
+            // 根据捕获组匹配到的匹配项，对source中相应的部分做修改
             if (escape) {
-                // 需要对变量进行编码（=> HTML 实体编码）
-                // 避免 XSS 攻击
+
                 source += "'+\n((__t=(" + escape + "))==null?'':_.escape(__t))+\n'";
             } else if (interpolate) {
                 // 单纯的插入变量
                 source += "'+\n((__t=(" + interpolate + "))==null?'':__t)+\n'";
             } else if (evaluate) {
-                // 可以直接执行的 JavaScript 语句
-                // 注意 "__p+="，__p 为渲染返回的字符串
+                // 可以直接执行的 JavaScript 语句，直接进行拼接
                 source += "';\n" + evaluate + "\n__p+='";
             }
             // Adobe VMs need the match returned to produce the correct offset.
@@ -3113,26 +3139,29 @@
         });
 
         source += "';\n";
+        console.log(source);
         // By default, `template` places the values from your data in the local scope via the `with` statement.
         // However, you can specify a single variable name with the variable setting.
         // This can significantly improve the speed at which a template is able to render.
         // If a variable is not specified, place data values in local scope.
-        // 指定 scope
+        // 默认情况下，通过with来渲染模板
         // 如果设置了 settings.variable，能显著提升模板的渲染速度
-        // 否则，默认用 with 语句指定作用域
         if (!settings.variable)
             source = 'with(obj||{}){\n' + source + '}\n';
 
+        console.log(source);
         // 增加 print 功能
         // __p 为返回的字符串
         source = "var __t,__p='',__j=Array.prototype.join," +
             "print=function(){__p+=__j.call(arguments,'');};\n" +
             source + 'return __p;\n';
 
+        console.log(source);
         try {
             // render 方法，前两个参数为 render 方法的参数
             // obj 为传入的 JSON 对象，传入 _ 参数使得函数内部能用 Underscore 的函数
             var render = new Function(settings.variable || 'obj', '_', source);
+            console.log(render);
         } catch (e) {
             // 抛出错误
             e.source = source;
@@ -3167,9 +3196,11 @@
         // This mean that you compile Unserscore template on server side by some server-side script and save the result in a file.
         // Then use this file as compiled Unserscore template.
         template.source = 'function(' + argument + '){\n' + source + '}';
-
+        console.log(template.source);
         return template;
     };
+
+
 
     // Add a "chain" function. Start chaining a wrapped Underscore object.
     // 使支持链式调用
@@ -3228,10 +3259,13 @@
     _.mixin = function(obj) {
         // 遍历 obj 的 key，将方法挂载到 Underscore 上
         // 其实是将方法浅拷贝到 _.prototype 上
+
         _.each(_.functions(obj), function(name) {
             // 直接把方法挂载到 _[name] 上
             // 调用类似 _.myFunc([1, 2, 3], ..)
+
             var func = _[name] = obj[name];
+
 
             // 浅拷贝
             // 将 name 方法挂载到 _ 对象的原型链上，使之能 OOP 调用
@@ -3240,6 +3274,9 @@
                 var args = [this._wrapped];
 
                 // arguments 为 name 方法需要的其他参数
+                // Function.prototype.apply的第二个参数直接是args
+                // a=[];a.push([1,2,3])，那么你得到的是[[1 2 3]]
+                // [].push.apply(a,[1,2,3])，那么你得到的是[1 2 3]
                 push.apply(args, arguments);
                 // 执行 func 方法
                 // 支持链式操作
@@ -3249,21 +3286,26 @@
     };
 
     // Add all of the Underscore functions to the wrapper object.
-    // 将前面定义的 underscore 方法添加给包装过的对象
-    // 即添加到 _.prototype 中
+    // 将前面定义的 underscore 所有方法添加到 _.prototype 中
     // 使 underscore 支持面向对象形式的调用
     _.mixin(_);
 
     // Add all mutator Array functions to the wrapper.
-    // 将 Array 原型链上有的方法都添加到 underscore 中
+    // 将 Array 原型链上所有的方法都添加到 underscore 中
+
     _.each(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(name) {
         var method = ArrayProto[name];
+
         _.prototype[name] = function() {
+
             var obj = this._wrapped;
+            // 在执行的时候直接通过apply执行
             method.apply(obj, arguments);
 
+            //为什么要delete obj[0]?
             if ((name === 'shift' || name === 'splice') && obj.length === 0)
                 delete obj[0];
+
 
             // 支持链式操作
             return result(this, obj);
@@ -3284,6 +3326,7 @@
     // 用 value 方法获取结果
     // _(obj).value === obj?
     _.prototype.value = function() {
+        //_wrapped保存着对象经过一系列操作后的结果
         return this._wrapped;
     };
 
@@ -3302,7 +3345,12 @@
     // popular enough to be bundled in a third party lib, but not be part of
     // an AMD load request. Those cases could generate an error when an
     // anonymous define() is called outside of a loader request.
-    // 兼容 AMD 规范
+    // 兼容 AMD 规范，Asynchronous Module Definition，即异步模块加载机制
+    //  define([module-name], [array-of-dependencies], [module-factory-or-object]);
+    //  其中：
+    //  module-name: 模块标识，可以省略。
+    //　array-of-dependencies: 所依赖的模块，可以省略。
+    //　module-factory-or-object: 模块的实现，或者一个JavaScript对象。
     if (typeof define === 'function' && define.amd) {
         define('underscore', [], function() {
             return _;

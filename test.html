@@ -25,9 +25,9 @@
 <script>
 
     window.onload=function () {
-        var object = {cheese: 'crumpets', stuff: function(){ return 'nonsense'; }};
-        console.log(_.result(object, 'meat', 'ham'));
-
+        var compiled = _.template("hello: <%=  name %>  <%= name %>");
+        console.log(compiled({name: 'moe'}));
+        console.log(_.test({name: 'moe'}));
     }
 </script>
 </body>
