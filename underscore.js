@@ -3053,19 +3053,26 @@
     // => "<b>&lt;script&gt;</b>"
 
 
-    // var compiled = _.template("hello: <%=  name %>  <%= name %>");
-    // console.log(compiled({name: 'moe'}));
+    // var compiled = _.template("hello: <%=  name %> <b><%- value %></b> <% print('Hello '); %>");
+    // console.log(compiled({
+    //     name: 'moe',
+    //     value: '<script>'
+    // }));
     // 经过template函数会得到下面的function：
-    // function(obj){
+    // function(obj,_
+    //          /*``*/) {
     //     var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
     //     with(obj||{}){
     //         __p+='hello: '+
     //             ((__t=(  name ))==null?'':__t)+
-    //             '  '+
-    //             ((__t=( name ))==null?'':__t)+
-    //             '';
+    //             ' <b>'+
+    //             ((__t=( value ))==null?'':_.escape(__t))+
+    //             '</b> ';
+    //         print('Hello ');
+    //         __p+='';
     //     }
     //     return __p;
+    //
     // }
     _.template = function(text, settings, oldSettings) {
         // text是输入的原文本
@@ -3115,15 +3122,16 @@
         // replace函数会一直匹配到字符串末尾
         text.replace(matcher, function(match, escape, interpolate, evaluate, offset) {
 
-            // \n => \\n，首先先将text中匹配到的部分中需要转义的字符转义
+            // \n => \\n，首先先将text中（index，offset）中需要转义的字符转义
             source += text.slice(index, offset).replace(escaper, escapeChar);
 
-            // 改变 index 值，为了下次的 slice ？？？？
+            // 改变 index 值，为了下次的 slice
+            // index最后会等于text的长度
             index = offset + match.length;
 
             // 根据捕获组匹配到的匹配项，对source中相应的部分做修改
             if (escape) {
-
+                // 调用_.escape进行编码
                 source += "'+\n((__t=(" + escape + "))==null?'':_.escape(__t))+\n'";
             } else if (interpolate) {
                 // 单纯的插入变量
@@ -3137,29 +3145,31 @@
             // 将匹配到的内容原样返回（Adobe VMs 需要返回 match 来使得 offset 值正常）
             return match;
         });
-
+        // 为 source加上分号换行
         source += "';\n";
-        console.log(source);
+
         // By default, `template` places the values from your data in the local scope via the `with` statement.
         // However, you can specify a single variable name with the variable setting.
         // This can significantly improve the speed at which a template is able to render.
         // If a variable is not specified, place data values in local scope.
-        // 默认情况下，通过with来渲染模板
-        // 如果设置了 settings.variable，能显著提升模板的渲染速度
+        // 默认情况下，通过with来指定对象
+        // 如果设置了 settings.variable，则可以不使用with，直接采用指定的对象，可以提高效率
+        // 为source加上with语句（或者指定obj）
         if (!settings.variable)
             source = 'with(obj||{}){\n' + source + '}\n';
 
-        console.log(source);
-        // 增加 print 功能
-        // __p 为返回的字符串
+        // 增加 print 功能，用户可以选择使用print来输出，也可以选择使用<%= %>
+        // 这部分定义了返回函数的变量和一些方法，比如__j=Array.prototype.join，print=function(){__p+=__j.call(arguments,'');
+        // 可以看到__p是最后输出的字符串
         source = "var __t,__p='',__j=Array.prototype.join," +
             "print=function(){__p+=__j.call(arguments,'');};\n" +
             source + 'return __p;\n';
 
-        console.log(source);
+
         try {
-            // render 方法，前两个参数为 render 方法的参数
-            // obj 为传入的 JSON 对象，传入 _ 参数使得函数内部能用 Underscore 的函数
+            // 定义render 方法，前两个参数为 render 方法的参数，source作为函数体
+            // Function 构造函数可以接收任意数量的参数，
+            // 但最后一个参数始终都被看成是函数体，而前面的参数则枚举出了新函数的参数。
             var render = new Function(settings.variable || 'obj', '_', source);
             console.log(render);
         } catch (e) {
@@ -3172,8 +3182,9 @@
         // data 一般是 JSON 数据，用来渲染模板
         var template = function(data) {
             // render 为模板渲染函数
-            // 传入参数 _ ，使得模板里 <%  %> 里的代码能用 underscore 的方法
+            // data 为传入的 JSON 对象，传入 _ 参数使得函数内部能用 Underscore 的函数
             //（<%  %> - to execute some code）
+            // 直接调用的情况下，this 指向 root,但是函数体重通过with重新绑定了作用域
             return render.call(this, data, _);
         };
 
@@ -3195,8 +3206,9 @@
         // JST is a server-side thing, not client-side.
         // This mean that you compile Unserscore template on server side by some server-side script and save the result in a file.
         // Then use this file as compiled Unserscore template.
+        // 最后将函数定义完整赋值给template.source，可通过template.source来查看最后定义完整的函数
         template.source = 'function(' + argument + '){\n' + source + '}';
-        console.log(template.source);
+        // console.log(template.source);
         return template;
     };
 
@@ -3357,3 +3369,4 @@
         });
     }
 }.call(this));
+//2018.2.3 看完，历时不知道几个月

@@ -25,9 +25,12 @@
 <script>
 
     window.onload=function () {
-        var compiled = _.template("hello: <%=  name %>  <%= name %>");
-        console.log(compiled({name: 'moe'}));
-        console.log(_.test({name: 'moe'}));
+        var compiled = _.template("hello: <%=  name %> <b><%- value %></b> <% var a=0; var b=0; console.log(a+b); %>");
+        console.log(compiled({
+            name: 'moe',
+            value: '<script>'
+        }));
+        // console.log(_.test({name: 'moe'}));
     }
 </script>
 </body>
