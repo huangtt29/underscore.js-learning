@@ -2689,7 +2689,8 @@
 
     // Is a given variable an object?
     // 判断是否为对象
-    // 这里的对象包括 function 和 object,并且不包括空对象
+    // 需要注意的是JavaScript数组和函数是对象，字符串和数字不是。
+    // 虽然typeof null return object ,但这里不将null看做
     _.isObject = function(obj) {
         var type = typeof obj;
         //!!obj将obj转换成布尔类型，保证obj不是null
