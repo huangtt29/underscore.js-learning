@@ -1757,6 +1757,7 @@
     // window.onscroll = _.throttle(log, 1000);
     // window.onscroll = _.throttle(log, 1000, {leading: false});
     // window.onscroll = _.throttle(log, 1000, {trailing: false});
+    //
     // 以scroll为例，滚动开始时会触发一次函数
     // 滚动结束后也会触发一次，所以正常情况下，都会触发两次函数。
     // 但是可以通过 {trailing: false} {leading: false}配置
@@ -2607,8 +2608,6 @@
             // Deep compare the contents, ignoring non-numeric properties.
             // 递归比较数组中的每一项，忽略不可数的项
             while (length--) {
-
-
                 if (!eq(a[length], b[length], aStack, bStack)) return false;
             }
         } else {
@@ -2619,7 +2618,6 @@
             // 两个对象的深度比较
             var keys = _.keys(a), key;
             length = keys.length;
-            console.log(length);
             // Ensure that both objects contain the same number of properties before comparing deep equality.
             // a 和 b 对象的键数量不同
             if (_.keys(b).length !== length) return false;

@@ -6,31 +6,10 @@
 
 </head>
 <body>
-    <p>js中的类型判断总结
-        // 使用Array.isArray 或者 Object.prototype.toString.call
-        // 区分数组,普通对象
-        <!--bind-->
-        <!--_.isArguments-->
-        <!--节流去抖-->
-        <!--equal-->
-        <!--new 与 无new调用-->
-        <!--NaN-->
-        <!--hasOwnProperty for in-->
-
-    </p>
-    <p></p>
-
-
 <script src="underscore.js" type="text/javascript"></script>
 <script>
-
     window.onload=function () {
-        var compiled = _.template("hello: <%=  name %> <b><%- value %></b> <% var a=0; var b=0; console.log(a+b); %>");
-        console.log(compiled({
-            name: 'moe',
-            value: '<script>'
-        }));
-        // console.log(_.test({name: 'moe'}));
+        console.log(_.isFinite("0"));
     }
 </script>
 </body>
